@@ -44,6 +44,7 @@ Option 3) If you have already installed BepiPred (creating the python environmen
 
 This way, Scipion will use your own BepiPred installation.
 
+|
 
 2. **MHC-I epitope prediction**
 
@@ -65,6 +66,7 @@ Option 2) If you have unzipped the mhc-i tars yourself you can either:
 
 2.2) Specify the location of the MHC folder in the scipion.conf file as: MHC-I_HOME = <PathToMhc-I_folder>
 
+|
 
 3. **MHC-II epitope prediction**
 
@@ -86,6 +88,7 @@ Option 2) If you have unzipped the mhc-ii tars yourself you can either:
 
 2.2) Specify the location of the MHC folder in the scipion.conf file as: MHC-II_HOME = <PathToMhc-II_folder>
 
+|
 
 4. **Population coverage tool**
 
@@ -97,15 +100,15 @@ http://tools.iedb.org/population/download/
 Once you obtain the software file (a tar.gz) you have several options to help Scipion finding it:
 
 Option 1) Edit the scipion.conf file and add the variables:
- - MHC-II_TAR = <PathToMhc-IITar> (IEDB_MHC_II-3.1.5.tar.gz)
+ - COVERAGE_TAR = <PathToPopCoverageTar> (IEDB_Population_Coverage-3.0.2.tar.gz)
 
 This way, Scipion will untar and move the corresponding files to the scipion/software/em folder and install mhc-ii.
 
-Option 2) If you have unzipped the mhc-ii tars yourself you can either:
+Option 2) If you have unzipped the population_coverage tars yourself you can either:
 
-2.1) Move the folder (of the form mhc_ii) to the scipion/software/em folder. Scipion will find it there.
+2.1) Move the folder (of the form population_coverage) to the scipion/software/em folder. Scipion will find it there.
 
-2.2) Specify the location of the MHC folder in the scipion.conf file as: MHC-II_HOME = <PathToMhc-II_folder>
+2.2) Specify the location of the MHC folder in the scipion.conf file as: COVERAGE_HOME = <PathToPopCoverage_folder>
 
 
 ===================
