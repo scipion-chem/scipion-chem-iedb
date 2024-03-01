@@ -1,0 +1,242 @@
+# **************************************************************************
+# *
+# * Authors:	Daniel Del Hoyo Gomez (ddelhoyo@cnb.csic.es)
+# *			 	Carlos Oscar Sorzano (coss@cnb.csic.es)
+# *			 	Martín Salinas Antón (martin.salinas@cnb.csic.es)
+# *
+# * Unidad de Bioinformatica of Centro Nacional de Biotecnologia, CSIC
+# *
+# * This program is free software; you can redistribute it and/or modify
+# * it under the terms of the GNU General Public License as published by
+# * the Free Software Foundation; either version 2 of the License, or
+# * (at your option) any later version.
+# *
+# * This program is distributed in the hope that it will be useful,
+# * but WITHOUT ANY WARRANTY; without even the implied warranty of
+# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# * GNU General Public License for more details.
+# *
+# * You should have received a copy of the GNU General Public License
+# * along with this program; if not, write to the Free Software
+# * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+# * 02111-1307  USA
+# *
+# * All comments concerning this program package may be sent to the
+# * e-mail address 'scipion@cnb.csic.es'
+# *
+# **************************************************************************
+"""
+This package contains protocols for creating and using ConPLex models for virtual screening
+"""
+
+# General imports
+import os, subprocess, json, pathlib
+
+# Scipion em imports
+import pwem
+from pwem import Config as emConfig
+from scipion.install.funcs import InstallHelper
+
+# Plugin imports
+from pwchem import Plugin as pwchemPlugin
+from .bibtex import _bibtexStr
+from .constants import *
+
+# Pluging variables
+_logo = 'dtu_logo.jpeg'
+
+class Plugin(pwchemPlugin):
+	"""
+	"""
+
+	@classmethod
+	def _defineVariables(cls):
+		#  BepiPred
+		cls._defineVar(BEPIPRED_DIC['home'], cls.getDefaultDir(BEPIPRED_DIC))
+		cls._defineVar(BEPIPRED_DIC['activation'], cls.getEnvActivationCommand(BEPIPRED_DIC))
+		cls._defineVar(BEPIPRED_DIC['zip'], None)
+
+		# MHC-I
+		cls._defineVar(MHCI_DIC['home'], cls.getDefaultDir(MHCI_DIC))
+		cls._defineVar(MHCI_DIC['tar'], None)
+
+		# MHC-II
+		cls._defineVar(MHCII_DIC['home'], cls.getDefaultDir(MHCII_DIC))
+		cls._defineVar(MHCII_DIC['tar'], None)
+
+		# Population Coverage
+		cls._defineVar(COVE_DIC['home'], cls.getDefaultDir(COVE_DIC))
+		cls._defineVar(COVE_DIC['tar'], None)
+
+	@classmethod
+	def defineBinaries(cls, env):
+		"""This function defines the binaries for each package."""
+		#  B-CELL package
+		if cls.checkVarPath(BEPIPRED_DIC, 'zip'):
+			cls._addBepiPredPackage(env, zipPath=cls.getVar(BEPIPRED_DIC['zip']))
+		elif cls.checkVarPath(BEPIPRED_DIC, 'home'):
+			if not cls.checkCallEnv(BEPIPRED_DIC):
+				cls._addBepiPredPackage(env, bepiHome=cls.getVar(BEPIPRED_DIC['home']))
+			# else:
+			# 	print('Environment activation command and HOME variables for BepiPred already found, installation no needed')
+
+	  #  MHC-I package
+		if cls.checkVarPath(MHCI_DIC, 'tar'):
+			cls._addMHCIPackage(env, tarPath=cls.getVar(MHCI_DIC['tar']))
+		elif cls.checkVarPath(MHCI_DIC, 'home'):
+			cls._addMHCIPackage(env, mhciHome=cls.getVar(MHCI_DIC['home']))
+
+		#  MHC-II package
+		if cls.checkVarPath(MHCII_DIC, 'tar'):
+			cls._addMHCIIPackage(env, tarPath=cls.getVar(MHCII_DIC['tar']))
+		elif cls.checkVarPath(MHCII_DIC, 'home'):
+			cls._addMHCIIPackage(env, mhciiHome=cls.getVar(MHCII_DIC['home']))
+
+		#  Population Coverage package
+		if cls.checkVarPath(COVE_DIC, 'tar'):
+			cls._addCoveragePackage(env, tarPath=cls.getVar(COVE_DIC['tar']))
+		elif cls.checkVarPath(COVE_DIC, 'home'):
+			cls._addCoveragePackage(env, coveHome=cls.getVar(COVE_DIC['home']))
+
+
+	@classmethod
+	def _addBepiPredPackage(cls, env, bepiHome=None, zipPath=None, default=True):
+		""" This function provides the neccessary commands for installing AutoDock. """
+		BEPIPRED_INSTALLED = '%s_installed' % BEPIPRED_DIC['name']
+
+		installationCmd = ''
+		if not bepiHome and zipPath:
+			bepiHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(BEPIPRED_DIC))
+			installationCmd += f'unzip -q {zipPath} -d {bepiHome} && ' \
+												 f'mv {bepiHome}/BepiPred3_src/* {bepiHome} && rm -r {bepiHome}/BepiPred3_src && '
+
+		installationCmd += f"cd {bepiHome} && sed -i 's/^torch==/#torch==/g' requirements.txt && "
+		installationCmd += f"conda create -y -n {cls.getEnvName(BEPIPRED_DIC)} " \
+											 f"python=3.9 --file requirements.txt && "
+		installationCmd += f"touch {BEPIPRED_INSTALLED}"
+
+		env.addPackage(BEPIPRED_DIC['name'], version=BEPIPRED_DIC['version'],
+									 commands=[(installationCmd, os.path.join(bepiHome, BEPIPRED_INSTALLED))], tar='void.tgz',
+									 neededProgs=["conda"], default=default, buildDir=os.path.split(bepiHome)[-1])
+
+	@classmethod
+	def _addMHCIPackage(cls, env, mhciHome=None, tarPath=None, default=True):
+		""" This function provides the neccessary commands for installing AutoDock. """
+		MHCI_INSTALLED = '%s_installed' % MHCI_DIC['name']
+
+		installationCmd = ''
+		if not mhciHome and tarPath:
+			mhciHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCI_DIC))
+			installationCmd += f'tar -xf {tarPath} -C {mhciHome} && ' \
+												 f'mv {mhciHome}/mhc_i/* {mhciHome} && rm -r {mhciHome}/mhc_i && '
+
+		installationCmd += f"cd {mhciHome} && ./configure && "
+		installationCmd += f"touch {MHCI_INSTALLED}"
+
+		env.addPackage(MHCI_DIC['name'], version=MHCI_DIC['version'],
+									commands=[(installationCmd, os.path.join(mhciHome, MHCI_INSTALLED))], tar='void.tgz',
+									default=default, buildDir=os.path.split(mhciHome)[-1])
+
+	@classmethod
+	def _addMHCIIPackage(cls, env, mhciiHome=None, tarPath=None, default=True):
+		""" This function provides the neccessary commands for installing AutoDock. """
+		MHCII_INSTALLED = '%s_installed' % MHCII_DIC['name']
+
+		installationCmd = ''
+		if not mhciiHome and tarPath:
+			mhciiHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCII_DIC))
+			installationCmd += f'tar -xf {tarPath} -C {mhciiHome} && ' \
+												 f'mv {mhciiHome}/mhc_ii/* {mhciiHome} && rm -r {mhciiHome}/mhc_ii && '
+
+		installationCmd += f"cd {mhciiHome} && ./configure.py && "
+		installationCmd += f"touch {MHCII_INSTALLED}"
+
+		env.addPackage(MHCII_DIC['name'], version=MHCII_DIC['version'],
+									 commands=[(installationCmd, os.path.join(mhciiHome, MHCII_INSTALLED))], tar='void.tgz',
+									 default=default, buildDir=os.path.split(mhciiHome)[-1])
+
+	@classmethod
+	def _addCoveragePackage(cls, env, coveHome=None, tarPath=None, default=True):
+		""" This function provides the neccessary commands for installing AutoDock. """
+		COVE_INSTALLED = '%s_installed' % COVE_DIC['name']
+
+		installationCmd = ''
+		if not coveHome and tarPath:
+			coveHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(COVE_DIC))
+			installationCmd += f'tar -xf {tarPath} -C {coveHome} && ' \
+												 f'mv {coveHome}/population_coverage/* {coveHome} && rm -r {coveHome}/population_coverage && '
+
+		installationCmd += f"cd {coveHome} && ./configure && "
+		installationCmd += f"touch {COVE_INSTALLED}"
+
+		env.addPackage(COVE_DIC['name'], version=COVE_DIC['version'],
+									 commands=[(installationCmd, os.path.join(coveHome, COVE_INSTALLED))], tar='void.tgz',
+									 default=default, buildDir=os.path.split(coveHome)[-1])
+
+
+
+	@classmethod
+	def validateInstallation(cls):
+		""" Check if the installation of this protocol is correct. Returning an empty list means that the installation
+		is correct and there are not errors. If some errors are found, a list with the error messages will be returned."""
+		mPaths = []
+		if not cls.checkVarPath(BEPIPRED_DIC, 'home'):
+			mPaths.append(f"Path of BepiPred home (folder like BepiPred3_src) does not exist.\n"
+										f"You must either define it in the scipion.conf (as {BEPIPRED_DIC['home']} = <pathToBepiPred_src>) "
+										f"or define the location of the raw dowloaded ZIP file (like bepipred-3.0b.src.zip) as "
+										f"{BEPIPRED_DIC['zip']} = <pathToBepiPredZip>.\nAlternatively, you can move the home folder into "
+										f"{emConfig.EM_ROOT} keeping the '{BEPIPRED_DIC['pattern']}' pattern.")
+
+		if not cls.checkCallEnv(BEPIPRED_DIC):
+			mPaths.append(f"Activation of the BepiPred environment failed.\n")
+
+		if len(mPaths) > 0:
+			mPaths.append(NOINSTALL_WARNING)
+		return mPaths
+
+	@classmethod
+	def getDefaultDir(cls, softDic, fn=""):
+		emDir = emConfig.EM_ROOT
+		for file in os.listdir(emDir):
+			if softDic['pattern'] in file.lower():
+				return os.path.join(emDir, file, fn)
+		# print(f'BepiPred software could not be found in SOFTWARE directory ({emDir})')
+		return os.path.join(emConfig.EM_ROOT, cls.getEnvName(softDic))
+
+	@classmethod
+	def checkVarPath(cls, softDic, var='home'):
+		'''Check if a plugin variable exists and so do its path'''
+		exists = False
+		varValue = cls.getVar(softDic[var])
+		print('varvalue: ', softDic, var, varValue)
+		if varValue and os.path.exists(varValue):
+			exists = True
+		print('Exists: ', exists)
+		return exists
+
+	@classmethod
+	def checkCallEnv(cls, packageDic):
+		actCommand = cls.getVar(packageDic['activation'])
+		try:
+			if 'conda' in actCommand and not 'shell.bash hook' in actCommand:
+				actCommand = f'{cls.getCondaActivationCmd()}{actCommand}'
+			subprocess.check_output(actCommand, shell=True)
+			envFine = True
+		except subprocess.CalledProcessError as e:
+			envFine = False
+		return envFine
+
+
+	# ---------------------------------- Protocol functions-----------------------
+	@classmethod
+	def runBepiPred(cls, protocol, args, cwd=None, popen=False):
+		""" Run rdkit command from a given protocol. """
+		bepiHome, bepiAct = cls.getVar(BEPIPRED_DIC["home"]), cls.getVar(BEPIPRED_DIC["activation"])
+		fullProgram = f'{bepiAct} && python {os.path.join(bepiHome, "bepipred3_CLI.py")}'
+		if not popen:
+			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+		else:
+			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
+
+	# ---------------------------------- Utils functions-----------------------
+
