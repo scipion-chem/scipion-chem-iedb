@@ -30,7 +30,7 @@ This package contains protocols for creating and using ConPLex models for virtua
 """
 
 # General imports
-import os, subprocess, json, pathlib
+import os, subprocess
 
 # Scipion em imports
 import pwem
@@ -94,6 +94,7 @@ class Plugin(pwchemPlugin):
 
 		#  Population Coverage package
 		if cls.checkVarPath(COVE_DIC, 'tar'):
+			print('Found cove tar')
 			cls._addCoveragePackage(env, tarPath=cls.getVar(COVE_DIC['tar']))
 		elif cls.checkVarPath(COVE_DIC, 'home'):
 			cls._addCoveragePackage(env, coveHome=cls.getVar(COVE_DIC['home']))
@@ -123,54 +124,63 @@ class Plugin(pwchemPlugin):
 	def _addMHCIPackage(cls, env, mhciHome=None, tarPath=None, default=True):
 		""" This function provides the neccessary commands for installing AutoDock. """
 		MHCI_INSTALLED = '%s_installed' % MHCI_DIC['name']
+		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCI_DIC))
 
 		installationCmd = ''
 		if not mhciHome and tarPath:
-			mhciHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCI_DIC))
+			mhciHome = emHome
 			installationCmd += f'tar -xf {tarPath} -C {mhciHome} && ' \
 												 f'mv {mhciHome}/mhc_i/* {mhciHome} && rm -r {mhciHome}/mhc_i && '
 
-		installationCmd += f"cd {mhciHome} && ./configure && "
+		if mhciHome != emHome:
+			installationCmd += f"mv {mhciHome}/* {emHome} && rm -r {mhciHome} && "
+		installationCmd += f"cd {emHome} && ./configure && "
 		installationCmd += f"touch {MHCI_INSTALLED}"
 
 		env.addPackage(MHCI_DIC['name'], version=MHCI_DIC['version'],
-									commands=[(installationCmd, os.path.join(mhciHome, MHCI_INSTALLED))], tar='void.tgz',
+									commands=[(installationCmd, os.path.join(emHome, MHCI_INSTALLED))], tar='void.tgz',
 									default=default, buildDir=os.path.split(mhciHome)[-1])
 
 	@classmethod
 	def _addMHCIIPackage(cls, env, mhciiHome=None, tarPath=None, default=True):
 		""" This function provides the neccessary commands for installing AutoDock. """
 		MHCII_INSTALLED = '%s_installed' % MHCII_DIC['name']
+		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCII_DIC))
 
 		installationCmd = ''
 		if not mhciiHome and tarPath:
-			mhciiHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCII_DIC))
+			mhciiHome = emHome
 			installationCmd += f'tar -xf {tarPath} -C {mhciiHome} && ' \
 												 f'mv {mhciiHome}/mhc_ii/* {mhciiHome} && rm -r {mhciiHome}/mhc_ii && '
 
-		installationCmd += f"cd {mhciiHome} && ./configure.py && "
+		if mhciiHome != emHome:
+			installationCmd += f"mv {mhciiHome}/* {emHome} && rm -r {mhciiHome} && "
+		installationCmd += f"cd {emHome} && ./configure.py && "
 		installationCmd += f"touch {MHCII_INSTALLED}"
 
 		env.addPackage(MHCII_DIC['name'], version=MHCII_DIC['version'],
-									 commands=[(installationCmd, os.path.join(mhciiHome, MHCII_INSTALLED))], tar='void.tgz',
+									 commands=[(installationCmd, os.path.join(emHome, MHCII_INSTALLED))], tar='void.tgz',
 									 default=default, buildDir=os.path.split(mhciiHome)[-1])
 
 	@classmethod
 	def _addCoveragePackage(cls, env, coveHome=None, tarPath=None, default=True):
 		""" This function provides the neccessary commands for installing AutoDock. """
 		COVE_INSTALLED = '%s_installed' % COVE_DIC['name']
+		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(COVE_DIC))
 
 		installationCmd = ''
 		if not coveHome and tarPath:
-			coveHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(COVE_DIC))
+			coveHome = emHome
 			installationCmd += f'tar -xf {tarPath} -C {coveHome} && ' \
 												 f'mv {coveHome}/population_coverage/* {coveHome} && rm -r {coveHome}/population_coverage && '
 
-		installationCmd += f"cd {coveHome} && ./configure && "
+		if coveHome != emHome:
+			installationCmd += f"mv {coveHome}/* {emHome} && rm -r {coveHome} && "
+		installationCmd += f"cd {emHome} && ./configure && "
 		installationCmd += f"touch {COVE_INSTALLED}"
 
 		env.addPackage(COVE_DIC['name'], version=COVE_DIC['version'],
-									 commands=[(installationCmd, os.path.join(coveHome, COVE_INSTALLED))], tar='void.tgz',
+									 commands=[(installationCmd, os.path.join(emHome, COVE_INSTALLED))], tar='void.tgz',
 									 default=default, buildDir=os.path.split(coveHome)[-1])
 
 
@@ -199,7 +209,8 @@ class Plugin(pwchemPlugin):
 		emDir = emConfig.EM_ROOT
 		for file in os.listdir(emDir):
 			if softDic['pattern'] in file.lower():
-				return os.path.join(emDir, file, fn)
+				foundDir = os.path.join(emDir, file, fn)
+				return foundDir.rstrip('/')
 		# print(f'BepiPred software could not be found in SOFTWARE directory ({emDir})')
 		return os.path.join(emConfig.EM_ROOT, cls.getEnvName(softDic))
 
@@ -208,10 +219,8 @@ class Plugin(pwchemPlugin):
 		'''Check if a plugin variable exists and so do its path'''
 		exists = False
 		varValue = cls.getVar(softDic[var])
-		print('varvalue: ', softDic, var, varValue)
 		if varValue and os.path.exists(varValue):
 			exists = True
-		print('Exists: ', exists)
 		return exists
 
 	@classmethod

@@ -38,7 +38,7 @@ MHCI_DIC = {'name': 'mhc_i',    'version': '3.1.5', 'pattern': 'mhc_i',
 MHCII_DIC = {'name': 'mhc_ii',    'version': '3.1.11', 'pattern': 'mhc_ii',
              'home': 'MHC_II_HOME', 'tar': 'MHC_II_TAR'}
 
-COVE_DIC = {'name': 'PopulationCoverage',    'version': '3.0.2', 'pattern': 'population_coverage',
+COVE_DIC = {'name': 'population_coverage',    'version': '3.0.2', 'pattern': 'population_coverage',
             'home': 'COVERAGE_HOME', 'tar': 'COVERAGE_TAR'}
 
 READ_URL = 'https://github.com/scipion-chem/scipion-chem-bepipred'
