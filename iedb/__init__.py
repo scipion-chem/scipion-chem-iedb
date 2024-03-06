@@ -94,7 +94,6 @@ class Plugin(pwchemPlugin):
 
 		#  Population Coverage package
 		if cls.checkVarPath(COVE_DIC, 'tar'):
-			print('Found cove tar')
 			cls._addCoveragePackage(env, tarPath=cls.getVar(COVE_DIC['tar']))
 		elif cls.checkVarPath(COVE_DIC, 'home'):
 			cls._addCoveragePackage(env, coveHome=cls.getVar(COVE_DIC['home']))
@@ -235,6 +234,11 @@ class Plugin(pwchemPlugin):
 			envFine = False
 		return envFine
 
+	@classmethod
+	def getPluginHome(cls, path=""):
+		import iedb
+		fnDir = os.path.split(iedb.__file__)[0]
+		return os.path.join(fnDir, path)
 
 	# ---------------------------------- Protocol functions-----------------------
 	@classmethod
@@ -242,6 +246,26 @@ class Plugin(pwchemPlugin):
 		""" Run rdkit command from a given protocol. """
 		bepiHome, bepiAct = cls.getVar(BEPIPRED_DIC["home"]), cls.getVar(BEPIPRED_DIC["activation"])
 		fullProgram = f'{bepiAct} && python {os.path.join(bepiHome, "bepipred3_CLI.py")}'
+		if not popen:
+			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+		else:
+			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
+
+	@classmethod
+	def runMHC_I(cls, protocol, args, cwd=None, popen=False):
+		""" Run mhc-i command from a given protocol. """
+		mhciHome = cls.getVar(MHCI_DIC["home"])
+		fullProgram = f'{os.path.join(mhciHome, "src/predict_binding.py")}'
+		if not popen:
+			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+		else:
+			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
+
+	@classmethod
+	def runMHC_II(cls, protocol, args, cwd=None, popen=False):
+		""" Run mhc-ii command from a given protocol. """
+		mhciiHome = cls.getVar(MHCII_DIC["home"])
+		fullProgram = f'python {os.path.join(mhciiHome, "mhc_II_binding.py")}'
 		if not popen:
 			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
 		else:

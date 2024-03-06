@@ -28,5 +28,61 @@
 """
 """
 
+from pyworkflow.gui import ListTreeProviderString, dialog
+from pyworkflow.object import String
 
+from pwchem.wizards import VariableWizard
 
+from ..protocols import ProtMHCIPrediction
+
+#################### MHC wizards #####################
+
+class SelectMultiAlleleWizard(VariableWizard):
+  _targets, _inputs, _outputs = [], {}, {}
+
+  def getListOfElements(self, form):
+    return form.protocol.getAvailableAlleles()
+
+  def show(self, form, *params):
+    inputParam, outputParam = self.getInputOutput(form)
+    elementList = self.getListOfElements(form)
+
+    finalList = []
+    for i in elementList:
+      finalList.append(String(i))
+    provider = ListTreeProviderString(finalList)
+    dlg = dialog.ListDialog(form.root, "Allele for prediction", provider,
+                            "Select one or several alleles")
+
+    vals = [v.get() for v in dlg.values]
+    form.setVar(outputParam[0], ', '.join(vals))
+
+SelectMultiAlleleWizard().addTarget(protocol=ProtMHCIPrediction,
+                                    targets=['alleleCustom'],
+                                    inputs=[],
+                                    outputs=['alleleCustom'])
+
+class SelectMultiLengthWizard(VariableWizard):
+  _targets, _inputs, _outputs = [], {}, {}
+
+  def getListOfElements(self, form):
+    return list(map(str, range(8, 15)))
+
+  def show(self, form, *params):
+    inputParam, outputParam = self.getInputOutput(form)
+    elementList = self.getListOfElements(form)
+
+    finalList = []
+    for i in elementList:
+      finalList.append(String(i))
+    provider = ListTreeProviderString(finalList)
+    dlg = dialog.ListDialog(form.root, "Epitope lengths for prediction", provider,
+                            "Select one or several lengths")
+
+    vals = [v.get() for v in dlg.values]
+    form.setVar(outputParam[0], ', '.join(vals))
+
+SelectMultiLengthWizard().addTarget(protocol=ProtMHCIPrediction,
+                                    targets=['lengths'],
+                                    inputs=[],
+                                    outputs=['lengths'])

@@ -24,4 +24,4 @@
 # *
 # **************************************************************************
 
-from bepipred.tests.test_bepipred import *
+from iedb.tests.tests import *

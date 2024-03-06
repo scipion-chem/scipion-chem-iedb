@@ -30,9 +30,10 @@ from pwem.protocols import ProtImportSequence
 
 from pwchem.utils import assertHandle
 
-from ..protocols import ProtBepiPredPrediction
+from ..protocols import ProtBepiPredPrediction, ProtMHCIPrediction
 
-class TestBepiPredPrediction(BaseTest):
+
+class BaseImportSeq(BaseTest):
 	NAME = 'USER_SEQ'
 	DESCRIPTION = 'User description'
 	AMINOACIDSSEQ1 = 'MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHG'
@@ -57,6 +58,8 @@ class TestBepiPredPrediction(BaseTest):
 			ProtImportSequence, **kwargs)
 		cls.proj.launchProtocol(cls.protImportSeq, wait=False)
 
+
+class TestBepiPredPrediction(BaseImportSeq):
 	def _runBepiPredPrediction(self):
 		protBepiPred = self.newProtocol(ProtBepiPredPrediction)
 
@@ -70,3 +73,18 @@ class TestBepiPredPrediction(BaseTest):
 		protBepiPred = self._runBepiPredPrediction()
 		self._waitOutput(protBepiPred, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protBepiPred, 'outputROIs', None))
+
+class TestMHCIPrediction(BaseImportSeq):
+	def _runMHCIPrediction(self):
+		protMHCI = self.newProtocol(ProtMHCIPrediction)
+
+		protMHCI.inputSequence.set(self.protImportSeq)
+		protMHCI.inputSequence.setExtended('outputSequence')
+
+		self.proj.launchProtocol(protMHCI, wait=False)
+		return protMHCI
+
+	def test(self):
+		protMHCI = self._runMHCIPrediction()
+		self._waitOutput(protMHCI, 'outputROIs', sleepTime=10)
+		assertHandle(self.assertIsNotNone, getattr(protMHCI, 'outputROIs', None))

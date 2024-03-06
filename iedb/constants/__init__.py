@@ -1,6 +1,6 @@
 # **************************************************************************
 # *
-# * Authors:     Carlos Oscar Sorzano (coss@cnb.csic.es)
+# * Authors:     Daniel Del Hoyo (ddelhoyo@cnb.csic.es)
 # *
 # * Unidad de  Bioinformatica of Centro Nacional de Biotecnologia , CSIC
 # *
@@ -24,37 +24,5 @@
 # *
 # **************************************************************************
 
-from iedb import Plugin
+from .constants import *
 
-def getAllelesFile(mhc, method):
-  return Plugin.getPluginHome(f'constants/alleles-{mhc}/{method}_alleles.txt')
-
-def getAllMHCIAlleles(method, specie='human'):
-  '''Parse the possible alleles given a method from the files stored in constants.
-  Returns a dictionary of the form: {specie: {mhc: [lengths]}}'''
-  alDic = {}
-  alleFile = getAllelesFile('I', method)
-  specie = specie.lower()
-  with open(alleFile) as f:
-    f.readlines(2)
-    for line in f:
-      sp, allele, l = line.split()
-      if specie == sp:
-        if allele not in alDic:
-          alDic[allele] = []
-
-        alDic[allele].append(l)
-  return alDic
-
-def getAllMHCIIAlleles(method, specie='human'):
-  alleles = []
-  if specie == 'human':
-    alleFile = getAllelesFile('II', method)
-    with open(alleFile) as f:
-      f.readline()
-      for line in f:
-        alleles.append(line.strip())
-  else:
-    from ..constants import MOUSE_MHCII_ALLELES
-    alleles = MOUSE_MHCII_ALLELES
-  return alleles
