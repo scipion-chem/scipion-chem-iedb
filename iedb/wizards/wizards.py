@@ -31,9 +31,9 @@
 from pyworkflow.gui import ListTreeProviderString, dialog
 from pyworkflow.object import String
 
-from pwchem.wizards import VariableWizard
+from pwchem.wizards import VariableWizard, AddElementWizard
 
-from ..protocols import ProtMHCIPrediction
+from ..protocols import *
 
 #################### MHC wizards #####################
 
@@ -86,3 +86,74 @@ SelectMultiLengthWizard().addTarget(protocol=ProtMHCIPrediction,
                                     targets=['lengths'],
                                     inputs=[],
                                     outputs=['lengths'])
+
+SelectMultiLengthWizard().addTarget(protocol=ProtMHCIIPrediction,
+                                    targets=['lengths'],
+                                    inputs=[],
+                                    outputs=['lengths'])
+
+class SelectAreaWizard(VariableWizard):
+  _targets, _inputs, _outputs = [], {}, {}
+
+  def show(self, form, *params):
+    from ..constants import POP_DIC
+    inputParam, outputParam = self.getInputOutput(form)
+    if outputParam[0] == 'ethnicity':
+      level = 4
+      areaOptions = POP_DIC['Ethnicity']
+    elif 'area' in outputParam[0]:
+      level = int(outputParam[0][-1])
+      areaOptions = form.protocol.getAreaOptions(level)
+
+    finalList = [String('All')]
+    for i in areaOptions:
+      finalList.append(String(i))
+    provider = ListTreeProviderString(finalList)
+    dlg = dialog.ListDialog(form.root, "Area options", provider,
+                            "Select one or several area options")
+
+    vals = [v.get() for v in dlg.values]
+    form.setVar(outputParam[0], ', '.join(vals))
+
+    for nLevel in range(level+1, 4):
+      form.setVar(f'area{nLevel}', 'All')
+
+
+SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+                             targets=['ethnicity'],
+                             inputs=[],
+                             outputs=['ethnicity'])
+
+SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+                             targets=['area1'],
+                             inputs=[],
+                             outputs=['area1'])
+
+SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+                             targets=['area2'],
+                             inputs=[],
+                             outputs=['area2'])
+
+SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+                             targets=['area3'],
+                             inputs=[],
+                             outputs=['area3'])
+
+class AddPopElement(AddElementWizard):
+  """Add area or ethnicity to be included in the protocol"""
+  _targets, _inputs, _outputs = [], {}, {}
+
+  def show(self, form, *params):
+    inputParam, outputParam = self.getInputOutput(form)
+    protocol = form.protocol
+
+    newAreas = protocol.getPopulationsElement()
+    if newAreas and newAreas.strip() != '':
+      prevList = self.curePrevList(getattr(protocol, outputParam[0]).get())
+      form.setVar(outputParam[0], prevList + '{}\n'.format(newAreas.strip()))
+
+
+AddPopElement().addTarget(protocol=ProtMHCIIPopulationCoverage,
+                          targets=['addArea'],
+                          inputs=['inAreas'],
+                          outputs=['inAreas'])
