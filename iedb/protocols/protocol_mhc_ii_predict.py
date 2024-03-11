@@ -76,12 +76,16 @@ class ProtMHCIIPrediction(EMProtocol):
                     help="Host specie  to predict the MHC-II epitopes on.")
 
     sGroup = form.addGroup('Selection')
+    sGroup.addParam('coreGroup', params.BooleanParam, label='Group peptides by core: ', default=True,
+                    expertLevel=params.LEVEL_ADVANCED,
+                    help="Whether to group the predicted peptides with the same 9mer core. The one with the better "
+                         "score will be chosen as representant")
     sGroup.addParam('selType', params.EnumParam, label='Select output peptides by: ',
                     default=0, choices=self._selTypes,
                     help="Select output peptides in the chosen manner")
-    sGroup.addParam('rank', params.FloatParam, label='Percentile rank threshold: ', default=1, condition='selType==0',
+    sGroup.addParam('rank', params.FloatParam, label='Percentile rank threshold: ', default=10, condition='selType==0',
                     help="Predicted percentile rank threshold (<=)")
-    sGroup.addParam('score', params.FloatParam, label='Percentile rank threshold: ', default=1, condition='selType==1',
+    sGroup.addParam('score', params.FloatParam, label='Score threshold: ', default=0.15, condition='selType==1',
                     help="Predicted percentile rank threshold (<=)")
     sGroup.addParam('topBinder', params.IntParam, label='Top threshold: ', default=5, condition='selType==2',
                     help="Select top x peptides based on percentile rank")
@@ -93,10 +97,6 @@ class ProtMHCIIPrediction(EMProtocol):
     pGroup.addParam('remDup', params.BooleanParam, label='Remove duplicate peptides: ', default=True,
                     expertLevel=params.LEVEL_ADVANCED,
                     help="Whether to remove duplicate predicted peptides from the output")
-    pGroup.addParam('mergeAlleles', params.BooleanParam, label='Merge alleles: ', default=True,
-                    expertLevel=params.LEVEL_ADVANCED,
-                    help="Merges same epitope sequences predicted to interact with different alleles into the same "
-                         "sequence ROI")
 
 
   def _insertAllSteps(self):
@@ -148,29 +148,48 @@ class ProtMHCIIPrediction(EMProtocol):
 
     iedbPlugin.runMHC_II(self, mhcArgs)
 
+  def getCoreData(self, coreDic):
+    cData = {'Epitope': [], 'Alleles': set([]), 'Score': 0 if self.selType == 1 else 100}
+    for (idx, epitope) in coreDic:
+      for (allele, score) in coreDic[(idx, epitope)]:
+        cData['Alleles'].add(allele)
+        if (score > cData['Score'] and self.selType == 1) or (score < cData['Score'] and self.selType != 1):
+          cData['Score'], cData['Epitope'] = score, (idx, epitope)
+    return cData
+
   def createOutputStep(self):
     epiDic = self.parseResults(self.getMHCOutputFile())
+    scoreStr = 'score' if self.selType == 1 else 'rank'
 
     inpSeq = self.inputSequence.get()
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
-    for (idxI, epitope) in epiDic:
-      idxs = [idxI, idxI + len(epitope)]
-      roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
-                        description=f'MHC-II TepiTool epitope')
 
-      if not self.mergeAlleles.get():
-        for allele, score in epiDic[(idxI, epitope)].items():
-          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1],
-                               source=self.method.get())
-          seqROI._score, seqROI._alleles = params.Float(score), params.String(allele)
-          outROIs.append(seqROI)
-      else:
-        alleles, scores = list(epiDic[(idxI, epitope)].keys()), list(epiDic[(idxI, epitope)].values())
-        allele, score = '/'.join(alleles), max(scores)
+    for core in epiDic:
+      if self.coreGroup.get():
+        coreData = self.getCoreData(epiDic[core])
+        epitope = coreData['Epitope'][1]
+        idxs = [coreData['Epitope'][0], coreData['Epitope'][0] + len(epitope)]
+        roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
+                          description=f'MHC-II TepiTool epitope')
         seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1],
                              source=self.method.get())
-        seqROI._score, seqROI._alleles = params.Float(score), params.String(allele)
+        seqROI._alleles, seqROI._core = params.String('/'.join(coreData['Alleles'])), params.String(core)
+        setattr(seqROI, scoreStr, params.Float(coreData['Score']))
         outROIs.append(seqROI)
+      else:
+        for (idxI, epitope) in epiDic[core]:
+          idxs = [idxI, idxI + len(epitope)]
+          roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
+                            description=f'MHC-II TepiTool epitope')
+
+          alleles, scores = [al[0] for al in epiDic[core][(idxI, epitope)]], \
+                            [al[1] for al in epiDic[core][(idxI, epitope)]]
+          allele, score = '/'.join(alleles), max(scores) if self.selType == 1 else min(scores)
+          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1],
+                               source=self.method.get())
+          seqROI._alleles, seqROI._core = params.String(allele), params.String(core)
+          setattr(seqROI, scoreStr, params.Float(score))
+          outROIs.append(seqROI)
 
     if len(outROIs) > 0:
       self._defineOutputs(outputROIs=outROIs)
@@ -193,9 +212,9 @@ class ProtMHCIIPrediction(EMProtocol):
       scores = resAr[:, rankIdx].astype(float)
       idxSel = scores < self.rank.get()
     elif thType == 1:
-      rankIdx = 8
+      rankIdx = 7
       scores = resAr[:, rankIdx].astype(float)
-      idxSel = scores < self.rank.get()
+      idxSel = scores > self.score.get()
     else:
       if thType == 2:
         nTop = int(self.topPerc.get() * 0.01 * resAr.shape[0])
@@ -209,9 +228,11 @@ class ProtMHCIIPrediction(EMProtocol):
     # Build the output from the selection
     epiDic = {}
     for row in resAr:
-      allele, seq_id, pos, _, _, peptide, _, _, ic50, rank = row[:10]
+      allele, seq_id, pos, _, _, core, peptide, score, rank = row[:9]
       key = (int(pos), peptide)
-      if not key in epiDic:
-        epiDic[key] = {}
-      epiDic[key][allele] = float(row[rankIdx])
+      if not core in epiDic:
+        epiDic[core] = {}
+      if not key in epiDic[core]:
+        epiDic[core][key] = []
+      epiDic[core][key].append([allele, float(row[rankIdx])])
     return epiDic
