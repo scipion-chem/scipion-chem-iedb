@@ -30,7 +30,7 @@ from pwem.protocols import ProtImportSequence
 
 from pwchem.utils import assertHandle
 
-from ..protocols import ProtBepiPredPrediction, ProtMHCIPrediction, ProtMHCIIPrediction
+from ..protocols import *
 
 
 class BaseImportSeq(BaseTest):
@@ -103,3 +103,22 @@ class TestMHCIIPrediction(BaseImportSeq):
 		protMHCII = self._runMHCIIPrediction()
 		self._waitOutput(protMHCII, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protMHCII, 'outputROIs', None))
+
+
+class TestMHCPopulationCoverage(TestMHCIIPrediction):
+	def _runMHCCoverage(self, protMHC):
+		protPop = self.newProtocol(ProtMHCIIPopulationCoverage,
+															 mhc=1, inAreas='Area')
+
+		protPop.inputSequenceROIs.set(protMHC)
+		protPop.inputSequenceROIs.setExtended('outputROIs')
+
+		self.proj.launchProtocol(protPop, wait=False)
+		return protPop
+
+	def test(self):
+		protMHCII = self._runMHCIIPrediction()
+		self._waitOutput(protMHCII, 'outputROIs', sleepTime=10)
+		protPop = self._runMHCCoverage(protMHCII)
+		self._waitOutput(protPop, 'outputROIs', sleepTime=10)
+		assertHandle(self.assertIsNotNone, getattr(protPop, 'outputROIs', None))
