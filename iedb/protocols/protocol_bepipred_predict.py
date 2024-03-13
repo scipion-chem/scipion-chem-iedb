@@ -121,7 +121,7 @@ class ProtBepiPredPrediction(EMProtocol):
       seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
       seqROI._epitopeType = params.String('B')
       seqROI._source = params.String('BepiPred')
-      seqROI._score = params.String(score)
+      setattr(seqROI, 'BepiPred', params.Float(score))
       outROIs.append(seqROI)
 
     if len(outROIs) > 0:

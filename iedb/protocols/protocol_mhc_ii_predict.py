@@ -159,10 +159,10 @@ class ProtMHCIIPrediction(EMProtocol):
 
   def createOutputStep(self):
     epiDic = self.parseResults(self.getMHCOutputFile())
-    scoreStr = 'score' if self.selType == 1 else 'rank'
 
     inpSeq = self.inputSequence.get()
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
+    method = self.getEnumText('method')
 
     for core in epiDic:
       if self.coreGroup.get():
@@ -174,8 +174,8 @@ class ProtMHCIIPrediction(EMProtocol):
         seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
         seqROI._alleles, seqROI._core = params.String('/'.join(coreData['Alleles'])), params.String(core)
         seqROI._epitopeType = params.String('MHC-II')
-        seqROI._source = params.String(self.method.get())
-        seqROI._score = params.Float(coreData["Score"])
+        seqROI._source = params.String(method)
+        setattr(seqROI, method, params.Float(coreData["Score"]))
         outROIs.append(seqROI)
       else:
         for (idxI, epitope) in epiDic[core]:
@@ -190,7 +190,7 @@ class ProtMHCIIPrediction(EMProtocol):
           seqROI._alleles, seqROI._core = params.String(allele), params.String(core)
           seqROI._epitopeType = params.String('MHC-II')
           seqROI._source = params.String(self.method.get())
-          seqROI._score = params.Float(score)
+          setattr(seqROI, self.method.get(), params.Float(score))
           outROIs.append(seqROI)
 
     if len(outROIs) > 0:
