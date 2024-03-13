@@ -159,6 +159,7 @@ class ProtMHCIIPrediction(EMProtocol):
 
   def createOutputStep(self):
     epiDic = self.parseResults(self.getMHCOutputFile())
+    scoreStr = 'score' if self.selType == 1 else 'rank'
 
     inpSeq = self.inputSequence.get()
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
@@ -174,7 +175,7 @@ class ProtMHCIIPrediction(EMProtocol):
         seqROI._alleles, seqROI._core = params.String('/'.join(coreData['Alleles'])), params.String(core)
         seqROI._epitopeType = params.String('MHC-II')
         seqROI._source = params.String(self.method.get())
-        seqROI._score = params.Float(score)
+        seqROI._score = params.Float(coreData["Score"])
         outROIs.append(seqROI)
       else:
         for (idxI, epitope) in epiDic[core]:
