@@ -156,16 +156,18 @@ class ProtMHCIPrediction(EMProtocol):
 
       if not self.mergeAlleles.get():
         for allele, score in epiDic[(idxI, epitope)].items():
-          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1],
-                               source=self.method.get())
+          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
           seqROI._score, seqROI._alleles = params.Float(score), params.String(allele)
+          seqROI._epitopeType = params.String('MHC-I')
+          seqROI._source = params.String(self.method.get())
           outROIs.append(seqROI)
       else:
         alleles, scores = list(epiDic[(idxI, epitope)].keys()), list(epiDic[(idxI, epitope)].values())
         allele, score = '/'.join(alleles), min(scores)
-        seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1],
-                             source=self.method.get())
+        seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
         seqROI._score, seqROI._alleles = params.Float(score), params.String(allele)
+        seqROI._epitopeType = params.String('MHC-I')
+        seqROI._source = params.String(self.method.get())
         outROIs.append(seqROI)
 
     if len(outROIs) > 0:

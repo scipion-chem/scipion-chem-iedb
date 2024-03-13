@@ -159,7 +159,6 @@ class ProtMHCIIPrediction(EMProtocol):
 
   def createOutputStep(self):
     epiDic = self.parseResults(self.getMHCOutputFile())
-    scoreStr = 'score' if self.selType == 1 else 'rank'
 
     inpSeq = self.inputSequence.get()
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
@@ -171,10 +170,11 @@ class ProtMHCIIPrediction(EMProtocol):
         idxs = [coreData['Epitope'][0], coreData['Epitope'][0] + len(epitope)]
         roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
                           description=f'MHC-II TepiTool epitope')
-        seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1],
-                             source=self.method.get())
+        seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
         seqROI._alleles, seqROI._core = params.String('/'.join(coreData['Alleles'])), params.String(core)
-        setattr(seqROI, scoreStr, params.Float(coreData['Score']))
+        seqROI._epitopeType = params.String('MHC-II')
+        seqROI._source = params.String(self.method.get())
+        seqROI._score = params.Float(score)
         outROIs.append(seqROI)
       else:
         for (idxI, epitope) in epiDic[core]:
@@ -185,10 +185,11 @@ class ProtMHCIIPrediction(EMProtocol):
           alleles, scores = [al[0] for al in epiDic[core][(idxI, epitope)]], \
                             [al[1] for al in epiDic[core][(idxI, epitope)]]
           allele, score = '/'.join(alleles), max(scores) if self.selType == 1 else min(scores)
-          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1],
-                               source=self.method.get())
+          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
           seqROI._alleles, seqROI._core = params.String(allele), params.String(core)
-          setattr(seqROI, scoreStr, params.Float(score))
+          seqROI._epitopeType = params.String('MHC-II')
+          seqROI._source = params.String(self.method.get())
+          seqROI._score = params.Float(score)
           outROIs.append(seqROI)
 
     if len(outROIs) > 0:
