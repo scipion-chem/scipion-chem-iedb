@@ -168,7 +168,7 @@ class ProtMHCIIPrediction(EMProtocol):
       if self.coreGroup.get():
         coreData = self.getCoreData(epiDic[core])
         epitope = coreData['Epitope'][1]
-        idxs = [coreData['Epitope'][0], coreData['Epitope'][0] + len(epitope)]
+        idxs = [coreData['Epitope'][0], coreData['Epitope'][0] + len(epitope) - 1]
         roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
                           description=f'MHC-II TepiTool epitope')
         seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
@@ -179,7 +179,7 @@ class ProtMHCIIPrediction(EMProtocol):
         outROIs.append(seqROI)
       else:
         for (idxI, epitope) in epiDic[core]:
-          idxs = [idxI, idxI + len(epitope)]
+          idxs = [idxI, idxI + len(epitope) - 1]
           roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
                             description=f'MHC-II TepiTool epitope')
 

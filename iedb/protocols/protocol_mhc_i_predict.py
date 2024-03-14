@@ -152,7 +152,7 @@ class ProtMHCIPrediction(EMProtocol):
     method = self.getEnumText('method')
 
     for (idxI, epitope) in epiDic:
-      idxs = [idxI, idxI + len(epitope)]
+      idxs = [idxI, idxI + len(epitope) - 1]
       roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
                         description=f'MHC-I TepiTool epitope')
 
