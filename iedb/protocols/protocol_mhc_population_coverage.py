@@ -25,16 +25,14 @@
 # **************************************************************************
 
 import os
-import numpy as np
 
 from pwem.protocols import EMProtocol
 from pyworkflow.protocol import params
 
-from pwchem.objects import Sequence, SequenceROI, SetOfSequenceROIs
-
 from .. import Plugin as iedbPlugin
 from ..constants import POP_DIC
-from ..utils import getAllMHCIIAlleles
+from ..utils import translateArea, buildMHCCoverageArgs, parseCoverageResults
+
 
 class ProtMHCIIPopulationCoverage(EMProtocol):
   """Calculates the population coverage of a series of MHC epitopes"""
@@ -87,18 +85,12 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
     self._insertFunctionStep(self.createOutputStep)
 
   def coverageStep(self):
-    inEpiFile = self.getInputEpitopes()
     selPops = self.getSelectedPopulations()
-    oFile = self.getCoverageOutputFile()
-
-    fullPopStr = '","'.join(selPops)
-
-    coveArgs = f'-p "{fullPopStr}" -c {self.getEnumText("mhc")} -f {inEpiFile} > {oFile} '
-
-    iedbPlugin.runPopulationCoverage(self, coveArgs)
+    epFile, oFile = self._getExtraPath('inputEpitopes.tsv'), self.getCoverageOutputFile()
+    self.performCoverageAnalysis(self.inputSequenceROIs.get(), epFile, selPops, self.getEnumText("mhc"), oFile)
 
   def createOutputStep(self):
-    coveDic = self.parseResults(self.getCoverageOutputFile())['average']
+    coveDic = parseCoverageResults(self.getCoverageOutputFile())['average']
 
     outROIs = self.inputSequenceROIs.get().createCopy(self._getPath(), copyInfo=True, copyItems=True)
     outROIs._coverage = params.String(coveDic['coverage'])
@@ -113,26 +105,11 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
 
   def getCoverageOutputFile(self):
     return os.path.abspath(self._getExtraPath('coverage_results.tsv'))
-
-  def getInputEpitopes(self):
-    inFile = self._getExtraPath('inputEpitopes.tsv')
-    with open(inFile, 'w') as f:
-      for roi in self.inputSequenceROIs.get():
-        alleles = getattr(roi, '_alleles').get().replace('/', ',')
-        f.write(f'{roi.getROISequence()}\t{alleles}\n')
-    return inFile
-
-  def parseResults(self, oFile):
-    oDic = {}
-    with open(oFile) as f:
-      [f.readline() for i in range(2)]
-      for line in f:
-        if line.strip():
-          sline = line.split('\t')
-          oDic[sline[0]] = {'coverage': sline[1], 'average_hit': sline[2], 'pc90': sline[3].strip()}
-        else:
-          break
-    return oDic
+  
+  def performCoverageAnalysis(self, inputROIs, epFile, populations, mhc, oFile):
+    coveArgs = buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oFile)
+    iedbPlugin.runPopulationCoverage(self, coveArgs)
+    return oFile
 
   def getAreaOptions(self, level):
     areas = [self.area1.get(), self.area2.get()]
@@ -169,11 +146,7 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
       popElements = popLine.split('/ ')[-1].split(',')
       [pops.append(p.strip()) for p in popElements if p.strip() not in ['All', '']]
 
-    if 'Area' in pops:
-      pops.remove('Area')
-      pops += list(POP_DIC['Area'].keys())
-
-    pops.sort()
+    pops = translateArea(pops)
     return pops
 
   def _summary(self):

@@ -25,6 +25,7 @@
 # **************************************************************************
 
 from iedb import Plugin
+from iedb.constants import POP_DIC
 
 def getAllelesFile(mhc, method):
   return Plugin.getPluginHome(f'constants/alleles-{mhc}/{method}_alleles.txt')
@@ -58,3 +59,37 @@ def getAllMHCIIAlleles(method, specie='human'):
     from ..constants import MOUSE_MHCII_ALLELES
     alleles = MOUSE_MHCII_ALLELES
   return alleles
+
+def getInputEpitopes(inputROIs, epFile):
+  with open(epFile, 'w') as f:
+    for roi in inputROIs:
+      alleles = getattr(roi, '_alleles').get().replace('/', ',')
+      f.write(f'{roi.getROISequence()}\t{alleles}\n')
+  return epFile
+
+def translateArea(pops):
+  if 'Area' in pops:
+    pops.remove('Area')
+    pops += list(POP_DIC['Area'].keys())
+
+  pops.sort()
+  return pops
+
+def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oFile):
+  inEpiFile = getInputEpitopes(inputROIs, epFile)
+  fullPopStr = '","'.join(populations)
+
+  coveArgs = f'-p "{fullPopStr}" -c {mhc} -f {inEpiFile} > {oFile} '
+  return coveArgs
+
+def parseCoverageResults(oFile):
+  oDic = {}
+  with open(oFile) as f:
+    [f.readline() for i in range(2)]
+    for line in f:
+      if line.strip():
+        sline = line.split('\t')
+        oDic[sline[0]] = {'coverage': sline[1], 'average_hit': sline[2], 'pc90': sline[3].strip()}
+      else:
+        break
+  return oDic
