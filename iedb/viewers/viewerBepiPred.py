@@ -26,46 +26,30 @@
 import os, webbrowser
 
 from pyworkflow.protocol import params, Protocol
-import pyworkflow.viewer as pwviewer
 
-from pwchem.viewers.viewers_sequences import SequenceAliView
+from pwchem.viewers.viewers_sequences import SequenceGeneralViewer
 
 from ..protocols import ProtBepiPredPrediction
 
-class ViewerBepiPred(pwviewer.ProtocolViewer):
+class ViewerBepiPred(SequenceGeneralViewer):
   _label = 'BepiPred viewer'
   _targets = [ProtBepiPredPrediction]
 
   def _defineParams(self, form):
-    form.addSection(label='Visualization of BepiPred epitoeps')
+    super()._defineParams(form)
     group = form.addGroup('BepiPred scores view')
     group.addParam('displayBepiPred', params.LabelParam,
                    label='Display with BepiPred scores: ',
                    help='Display html with raw BepiPred scores')
 
-    group = form.addGroup('BepiPred output epitopes view')
-    group.addParam('displayROIs', params.LabelParam,
-                   label='Display output BepiPred ROIs: ',
-                   help='Display output ROIs as epitopes with AliView')
-
   def _getVisualizeDict(self):
-    dispDic = {'displayBepiPred': self._showBepiPred,
-               'displayROIs': self._showROIs}
-    return dispDic
+    vDic = super()._getVisualizeDict()
+    vDic.update({'displayBepiPred': self._showBepiPred})
+    return vDic
 
   def _showBepiPred(self, paramName=None):
       htmlFile = self.protocol._getExtraPath('output_interactive_figures.html')
       webbrowser.open(htmlFile)
-
-  def _showROIs(self, paramName=None):
-    obj = self.getProtocol().outputROIs
-    outDir = self.getOutDir()
-    outPath = os.path.join(outDir, f'viewSequences_{obj.getSequenceObj().getId()}.fasta')
-    obj.exportToFile(outPath)
-
-    seqFiles = [outPath]
-
-    return [SequenceAliView(seqFiles, cwd=outDir)]
 
   def getOutDir(self):
     return os.path.abspath(self.getProtocol()._getExtraPath()

@@ -28,3 +28,4 @@ from .protocol_bepipred_predict import ProtBepiPredPrediction
 from .protocol_mhc_i_predict import ProtMHCIPrediction
 from .protocol_mhc_ii_predict import ProtMHCIIPrediction
 from .protocol_mhc_population_coverage import ProtMHCIIPopulationCoverage
+from .protocol_ellipro_predict import ProtElliProPrediction

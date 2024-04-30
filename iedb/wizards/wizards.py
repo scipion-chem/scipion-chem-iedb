@@ -31,7 +31,7 @@
 from pyworkflow.gui import ListTreeProviderString, dialog
 from pyworkflow.object import String
 
-from pwchem.wizards import VariableWizard, AddElementWizard
+from pwchem.wizards import VariableWizard, AddElementWizard, SelectMultiChainWizard
 
 from ..protocols import *
 
@@ -157,3 +157,10 @@ AddPopElement().addTarget(protocol=ProtMHCIIPopulationCoverage,
                           targets=['addArea'],
                           inputs=['inAreas'],
                           outputs=['inAreas'])
+
+
+SelectMultiChainWizard().addTarget(protocol=ProtElliProPrediction,
+                                targets=['chain_name'],
+                                inputs=['inputAtomStruct'],
+                                outputs=['chain_name'])
+

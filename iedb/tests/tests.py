@@ -26,7 +26,7 @@
 
 from pyworkflow.tests import setupTestProject, DataSet, BaseTest
 
-from pwem.protocols import ProtImportSequence
+from pwem.protocols import ProtImportSequence, ProtImportPdb
 
 from pwchem.utils import assertHandle
 
@@ -122,3 +122,35 @@ class TestMHCPopulationCoverage(TestMHCIIPrediction):
 		protPop = self._runMHCCoverage(protMHCII)
 		self._waitOutput(protPop, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protPop, 'outputROIs', None))
+
+class TestElliProPrediction(BaseTest):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.ds = DataSet.getDataSet('model_building_tutorial')
+		setupTestProject(cls)
+
+		cls._runImportPDB()
+		cls._waitOutput(cls.protImportPDB, 'outputPdb', sleepTime=5)
+
+	@classmethod
+	def _runImportPDB(cls):
+		cls.protImportPDB = cls.newProtocol(ProtImportPdb,
+			inputPdbData=1, pdbFile=cls.ds.getFile('PDBx_mmCIF/5ni1.pdb'))
+		cls.proj.launchProtocol(cls.protImportPDB, wait=False)
+
+	def _runElliProPrediction(self):
+		protElliPro = self.newProtocol(ProtElliProPrediction,
+																	 rchains=True, chain_name='{"model": 0, "chain": "A", "residues": 92}')
+
+		protElliPro.inputAtomStruct.set(self.protImportPDB)
+		protElliPro.inputAtomStruct.setExtended('outputPdb')
+
+		self.proj.launchProtocol(protElliPro, wait=False)
+		return protElliPro
+
+	def test(self):
+		protElliPro = self._runElliProPrediction()
+		self._waitOutput(protElliPro, 'outputROIs', sleepTime=10)
+		assertHandle(self.assertIsNotNone, getattr(protElliPro, 'outputStructROIs', None))
+		assertHandle(self.assertIsNotNone, getattr(protElliPro, 'outSequenceROIs_A', None))

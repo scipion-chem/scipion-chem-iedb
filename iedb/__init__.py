@@ -68,6 +68,9 @@ class Plugin(pwchemPlugin):
 		cls._defineVar(COVE_DIC['home'], cls.getDefaultDir(COVE_DIC))
 		cls._defineVar(COVE_DIC['tar'], None)
 
+		cls._defineVar(ELLI_DIC['home'], cls.getDefaultDir(ELLI_DIC))
+		cls._defineVar(ELLI_DIC['jar'], None)
+
 	@classmethod
 	def defineBinaries(cls, env):
 		"""This function defines the binaries for each package."""
@@ -98,10 +101,13 @@ class Plugin(pwchemPlugin):
 		elif cls.checkVarPath(COVE_DIC, 'home'):
 			cls._addCoveragePackage(env, coveHome=cls.getVar(COVE_DIC['home']))
 
+		if cls.checkVarPath(ELLI_DIC, 'jar'):
+			cls._addElliProPackage(env, elliJar=cls.getVar(ELLI_DIC['jar']))
+
 
 	@classmethod
 	def _addBepiPredPackage(cls, env, bepiHome=None, zipPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing BepiPred. """
 		BEPIPRED_INSTALLED = '%s_installed' % BEPIPRED_DIC['name']
 
 		installationCmd = ''
@@ -121,7 +127,7 @@ class Plugin(pwchemPlugin):
 
 	@classmethod
 	def _addMHCIPackage(cls, env, mhciHome=None, tarPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing the MHC-I prediction program. """
 		MHCI_INSTALLED = '%s_installed' % MHCI_DIC['name']
 		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCI_DIC))
 
@@ -142,7 +148,7 @@ class Plugin(pwchemPlugin):
 
 	@classmethod
 	def _addMHCIIPackage(cls, env, mhciiHome=None, tarPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing the MHC-II prediction program. """
 		MHCII_INSTALLED = '%s_installed' % MHCII_DIC['name']
 		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCII_DIC))
 
@@ -163,7 +169,7 @@ class Plugin(pwchemPlugin):
 
 	@classmethod
 	def _addCoveragePackage(cls, env, coveHome=None, tarPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing the MHC coverage program. """
 		COVE_INSTALLED = '%s_installed' % COVE_DIC['name']
 		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(COVE_DIC))
 
@@ -182,6 +188,16 @@ class Plugin(pwchemPlugin):
 									 commands=[(installationCmd, os.path.join(emHome, COVE_INSTALLED))], tar='void.tgz',
 									 default=default, buildDir=os.path.split(coveHome)[-1])
 
+	@classmethod
+	def _addElliProPackage(cls, env, elliJar, default=True):
+		""" This function provides the neccessary commands for installing ElliPro. """
+		ELLI_INSTALLED = '%s_installed' % ELLI_DIC['name']
+		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(ELLI_DIC))
+
+		installationCmd = f"mv {elliJar} {emHome} && cd {emHome} && touch {ELLI_INSTALLED}"
+		env.addPackage(ELLI_DIC['name'], version=ELLI_DIC['version'],
+									 commands=[(installationCmd, os.path.join(emHome, ELLI_INSTALLED))], tar='void.tgz',
+									 default=default)
 
 
 	@classmethod
@@ -276,6 +292,16 @@ class Plugin(pwchemPlugin):
 		""" Run population coverage command from a given protocol. """
 		coveHome = cls.getVar(COVE_DIC["home"])
 		fullProgram = f'python {os.path.join(coveHome, "calculate_population_coverage.py")}'
+		if not popen:
+			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+		else:
+			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
+
+	@classmethod
+	def runElliPro(cls, protocol, args, cwd=None, popen=False):
+		""" Run ElliPro command from a given protocol. """
+		elliHome = cls.getVar(ELLI_DIC["home"])
+		fullProgram = f'java -jar {os.path.join(elliHome, "ElliPro.jar")}'
 		if not popen:
 			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
 		else:
