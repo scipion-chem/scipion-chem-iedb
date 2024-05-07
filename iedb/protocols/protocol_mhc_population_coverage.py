@@ -29,6 +29,8 @@ import os
 from pwem.protocols import EMProtocol
 from pyworkflow.protocol import params
 
+from pwchem.utils import runInParallel
+
 from .. import Plugin as iedbPlugin
 from ..constants import POP_DIC
 from ..utils import translateArea, buildMHCCoverageArgs, parseCoverageResults
@@ -38,9 +40,9 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
   """Calculates the population coverage of a series of MHC epitopes"""
   _label = 'mhc population coverage'
 
-
   def __init__(self, **kwargs):
     EMProtocol.__init__(self, **kwargs)
+    self.stepsExecutionMode = params.STEPS_PARALLEL
 
   def _defineParams(self, form):
     form.addSection(label='Input')
@@ -52,6 +54,10 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
     iGroup.addParam('mhc', params.EnumParam, label='MHC type: ', display=params.EnumParam.DISPLAY_HLIST,
                     default=2, choices=['I', 'II', 'combined'],
                     help="Host specie  to predict the MHC-II epitopes on.")
+    iGroup.addParam('eachROI', params.BooleanParam, label='Perform analysis for each ROI: ', default=True,
+                    help="Perform the analysis for each ROI separately")
+    iGroup.addParam('allROI', params.BooleanParam, label='Perform analysis for all ROIs together: ', default=True,
+                    help="Perform the analysis for all ROIs together, taking into account all their alleles")
 
     pGroup = form.addGroup('Population')
     pGroup.addParam('pop', params.EnumParam, label='Population by: ',
@@ -80,36 +86,67 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
                     label='Populations summary: ',
                     help='Summary of the areas or ethnicities to be included in the analysis')
 
+    form.addParallelSection(threads=4, mpi=1)
+
   def _insertAllSteps(self):
     self._insertFunctionStep(self.coverageStep)
     self._insertFunctionStep(self.createOutputStep)
 
   def coverageStep(self):
     selPops = self.getSelectedPopulations()
-    epFile, oFile = self._getExtraPath('inputEpitopes.tsv'), self.getCoverageOutputFile()
-    self.performCoverageAnalysis(self.inputSequenceROIs.get(), epFile, selPops, self.getEnumText("mhc"), oFile)
+    epFile, oDir = self._getExtraPath('inputEpitopes.tsv'), self.getResultsDir()
+    os.mkdir(oDir)
+    self.performCoverageAnalysis(self.inputSequenceROIs.get(), epFile, selPops, self.getEnumText("mhc"), oDir,
+                                 self.eachROI, self.allROI)
 
   def createOutputStep(self):
-    coveDic = parseCoverageResults(self.getCoverageOutputFile())['average']
+    coveDic = self.parseResults()
+    outROIs = self.inputSequenceROIs.get().createCopy(self._getPath(), copyInfo=True, copyItems=False)
 
-    outROIs = self.inputSequenceROIs.get().createCopy(self._getPath(), copyInfo=True, copyItems=True)
-    outROIs._coverage = params.String(coveDic['coverage'])
-    outROIs._averageHit = params.Float(coveDic['average_hit'])
-    outROIs._pc90 = params.Float(coveDic['pc90'])
-    outROIs._coverageFile = params.String(self.getCoverageOutputFile())
+    for roi in self.inputSequenceROIs.get():
+      if self.eachROI:
+        roiDic = coveDic[str(roi.getObjId())]
+        roi._coverage = params.Float(roiDic['coverage'])
+        roi._averageHit = params.Float(roiDic['average_hit'])
+        roi._pc90 = params.Float(roiDic['pc90'])
+      outROIs.append(roi)
+
+    if self.allROI:
+      roiDic = coveDic['All']
+      outROIs._coverage = params.Float(roiDic['coverage'])
+      outROIs._averageHit = params.Float(roiDic['average_hit'])
+      outROIs._pc90 = params.Float(roiDic['pc90'])
+      outROIs._coverageFile = params.String(self.getCoverageOutputFile())
 
     if len(outROIs) > 0:
       self._defineOutputs(outputROIs=outROIs)
 
   ##################### UTILS #####################
+  def getResultsDir(self, path=''):
+    return self._getPath('coverage_results', path)
+
+  def parseResults(self):
+    resDic = {}
+    resDir = self.getResultsDir()
+    for resFile in os.listdir(resDir):
+      outId = resFile.split('_')[-2]
+      resFile = os.path.join(resDir, resFile)
+      resDic[outId] = parseCoverageResults(resFile)['average']
+    return resDic
 
   def getCoverageOutputFile(self):
-    return os.path.abspath(self._getExtraPath('coverage_results.tsv'))
-  
-  def performCoverageAnalysis(self, inputROIs, epFile, populations, mhc, oFile):
-    coveArgs = buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oFile)
-    iedbPlugin.runPopulationCoverage(self, coveArgs)
-    return oFile
+    return os.path.abspath(self.getResultsDir('inputEpitopes_All_results.tsv'))
+
+  def performCoverageAnalysis(self, inputROIs, epFile, populations, mhc, oDir, eachROI, allROI):
+    if eachROI:
+      nt = self.numberOfThreads.get()
+      coveArgs = buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=True)
+      runInParallel(iedbPlugin.runPopulationCoverage, None,
+                    paramList=[coveArg for coveArg in coveArgs], jobs=nt)
+
+    if allROI:
+      coveArgs = buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=False)
+      iedbPlugin.runPopulationCoverage(coveArgs[0], protocol=self)
 
   def getAreaOptions(self, level):
     areas = [self.area1.get(), self.area2.get()]
@@ -152,7 +189,7 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
   def _summary(self):
     summ = []
     if os.path.exists(self.getCoverageOutputFile()):
-      coveDic = self.parseResults(self.getCoverageOutputFile())['average']
+      coveDic = parseCoverageResults(self.getCoverageOutputFile())['average']
       summ.append(f'Average coverage of the set of sequence ROIs (MHC {self.getEnumText("mhc")} epitopes) for the selected populations: '
                   f'\n  - Coverage: {coveDic["coverage"]}'
                   f'\n  - Average hit: {coveDic["average_hit"]}'

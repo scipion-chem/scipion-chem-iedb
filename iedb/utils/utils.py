@@ -24,6 +24,8 @@
 # *
 # **************************************************************************
 
+import os
+
 from iedb import Plugin
 from iedb.constants import POP_DIC
 
@@ -60,12 +62,24 @@ def getAllMHCIIAlleles(method, specie='human'):
     alleles = MOUSE_MHCII_ALLELES
   return alleles
 
-def getInputEpitopes(inputROIs, epFile):
-  with open(epFile, 'w') as f:
+def writeInputEpitopeFiles(inputROIs, epFile, separated):
+  outFiles = []
+  if separated:
     for roi in inputROIs:
-      alleles = getattr(roi, '_alleles').get().replace('/', ',')
-      f.write(f'{roi.getROISequence()}\t{alleles}\n')
-  return epFile
+      groupFile = epFile.replace('.tsv', f'_{roi.clone().getObjId()}.tsv')
+      with open(groupFile, 'w') as f:
+        alleles = getattr(roi, '_alleles').get().replace('/', ',')
+        f.write(f'{roi.getROISequence()}\t{alleles}\n')
+      outFiles.append(groupFile)
+  else:
+    epFile = epFile.replace('.tsv', f'_All.tsv')
+    with open(epFile, 'w') as f:
+      for roi in inputROIs:
+        alleles = getattr(roi, '_alleles').get().replace('/', ',')
+        f.write(f'{roi.getROISequence()}\t{alleles}\n')
+    outFiles.append(epFile)
+
+  return outFiles
 
 def translateArea(pops):
   if 'Area' in pops:
@@ -75,11 +89,15 @@ def translateArea(pops):
   pops.sort()
   return pops
 
-def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oFile):
-  inEpiFile = getInputEpitopes(inputROIs, epFile)
+def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=True):
+  inEpiFiles = writeInputEpitopeFiles(inputROIs, epFile, separated)
   fullPopStr = '","'.join(populations)
 
-  coveArgs = f'-p "{fullPopStr}" -c {mhc} -f {inEpiFile} > {oFile} '
+  coveArgs = []
+  for epFile in inEpiFiles:
+    epBase = os.path.basename(epFile)
+    oFile = os.path.join(oDir, epBase.replace('.tsv', '_results.tsv'))
+    coveArgs += [f'-p "{fullPopStr}" -c {mhc} -f {epFile} > {oFile} ']
   return coveArgs
 
 def parseCoverageResults(oFile):
@@ -89,7 +107,7 @@ def parseCoverageResults(oFile):
     for line in f:
       if line.strip():
         sline = line.split('\t')
-        oDic[sline[0]] = {'coverage': sline[1], 'average_hit': sline[2], 'pc90': sline[3].strip()}
+        oDic[sline[0]] = {'coverage': float(sline[1][:-2]), 'average_hit': sline[2], 'pc90': sline[3].strip()}
       else:
         break
   return oDic

@@ -288,11 +288,11 @@ class Plugin(pwchemPlugin):
 			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
 
 	@classmethod
-	def runPopulationCoverage(cls, protocol, args, cwd=None, popen=False):
+	def runPopulationCoverage(cls, args, protocol=None, cwd=None, popen=False):
 		""" Run population coverage command from a given protocol. """
 		coveHome = cls.getVar(COVE_DIC["home"])
 		fullProgram = f'python {os.path.join(coveHome, "calculate_population_coverage.py")}'
-		if not popen:
+		if not popen and protocol:
 			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
 		else:
 			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
