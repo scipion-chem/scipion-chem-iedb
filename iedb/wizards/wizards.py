@@ -66,7 +66,7 @@ class SelectMultiLengthWizard(VariableWizard):
   _targets, _inputs, _outputs = [], {}, {}
 
   def getListOfElements(self, form):
-    return list(map(str, range(8, 15)))
+    return form.protocol.getAvailableLengthList()
 
   def show(self, form, *params):
     inputParam, outputParam = self.getInputOutput(form)

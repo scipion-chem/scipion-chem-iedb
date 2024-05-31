@@ -51,12 +51,23 @@ class ProtMHCIIPrediction(EMProtocol):
   def __init__(self, **kwargs):
     EMProtocol.__init__(self, **kwargs)
 
+  def getAvailableLengthList(self):
+    return list(map(str, range(11, 31)))
+
   def _defineParams(self, form):
     form.addSection(label='Input')
     iGroup = form.addGroup('Input')
-    iGroup.addParam('inputSequence', params.PointerParam, pointerClass="Sequence",
-                    label='Input protein sequence: ',
+    iGroup.addParam('inputSource', params.EnumParam, label='Input action: ',
+                    default=0, choices=['Predict over sequence', 'Label sequence ROIs'],
+                    display=params.EnumParam.DISPLAY_HLIST,
+                    help="Whether to predict the MHC-I epitopes present in a sequence and label them with the present"
+                         "alleles or label an already existing SetOfSequenceROIs with the alleles found in them")
+    iGroup.addParam('inputSequence', params.PointerParam, pointerClass="Sequence", allowsNull=True,
+                    label='Input protein sequence: ', condition='inputSource==0',
                     help="Protein sequence to perform the screening on")
+    iGroup.addParam('inputSequenceROIs', params.PointerParam, pointerClass="SetOfSequenceROIs",
+                    label='Input sequence ROIs: ', condition='inputSource==1', allowsNull=True,
+                    help="Set of sequence ROIs to label with the present MHC-II alleles")
 
     pGroup = form.addGroup('Parameters')
     pGroup.addParam('method', params.EnumParam, label='Prediction method: ',
@@ -66,7 +77,8 @@ class ProtMHCIIPrediction(EMProtocol):
                     default=0, choices=self._species,
                     help="Host specie  to predict the MHC-II epitopes on.")
     pGroup.addParam('lengths', params.StringParam, label='Peptide lengths: ', default='15',
-                    help="Available lengths to include in the analysis.")
+                    help="Available lengths to include in the analysis. "
+                         "You can include several lenght as comma separated  (11, 12,13)")
 
     pGroup.addParam('alleleGroup', params.EnumParam, label='Select allele groups: ', condition='specie==0',
                     default=1, choices=self._alleleGroups,
@@ -95,13 +107,96 @@ class ProtMHCIIPrediction(EMProtocol):
                     help="Select top x peptides based on percentile rank")
 
     pGroup.addParam('remDup', params.BooleanParam, label='Remove duplicate peptides: ', default=True,
-                    expertLevel=params.LEVEL_ADVANCED,
+                    expertLevel=params.LEVEL_ADVANCED, condition='inputSource==0',
                     help="Whether to remove duplicate predicted peptides from the output")
 
 
   def _insertAllSteps(self):
     self._insertFunctionStep(self.mhcStep)
     self._insertFunctionStep(self.createOutputStep)
+
+  def getLenghts(self):
+    return [int(leni.strip()) for leni in self.lengths.get().strip().split(',')]
+
+  def mhcStep(self):
+    inFile = self.writeInputFasta()
+    oFile = self.getMHCOutputFile()
+
+    method = self._mhciMethodsDic[self.getEnumText('method')]
+    selAlleles = self.getSelectedAlleles()
+    lenList = self.getLenghts()
+
+    allowedAlleles = getAllMHCIIAlleles(method)
+    alList = [allele for allele in selAlleles if allele in allowedAlleles]
+    fullAlStr, fullLenStr = ','.join(alList), ','.join([str(l) for l in lenList])
+
+    mhcArgs = f'{method} {fullAlStr} {inFile} {fullLenStr} > {oFile} '
+
+    iedbPlugin.runMHC_II(self, mhcArgs)
+
+  def createOutputStep(self):
+    epiDic = self.parseResults(self.getMHCOutputFile())
+
+    inpSeq = self.inputSequence.get()
+    outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
+    method = f"MHCII_{self.getEnumText('method')}"
+
+    if self.inputSource.get() == 0:
+      epiDic = epiDic['1']
+      for core in epiDic:
+        if self.coreGroup.get():
+          coreData = self.getCoreData(epiDic[core])
+          epitope = coreData['Epitope'][1]
+          idxs = [coreData['Epitope'][0], coreData['Epitope'][0] + len(epitope) - 1]
+          roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
+                            description=f'MHC-II TepiTool epitope')
+          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
+          seqROI._allelesMHCII, seqROI._core = params.String('/'.join(coreData['Alleles'])), params.String(core)
+          seqROI._epitopeType = params.String('MHC-II')
+          seqROI._sourceMHCII = params.String(method)
+          setattr(seqROI, method, params.Float(coreData["Score"]))
+          outROIs.append(seqROI)
+        else:
+          for (idxI, epitope) in epiDic[core]:
+            idxs = [idxI, idxI + len(epitope) - 1]
+            roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
+                              description=f'MHC-II TepiTool epitope')
+
+            alleles, scores = [al[0] for al in epiDic[core][(idxI, epitope)]], \
+                              [al[1] for al in epiDic[core][(idxI, epitope)]]
+            allele, score = '/'.join(alleles), max(scores) if self.selType == 1 else min(scores)
+            seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
+            seqROI._allelesMHCII, seqROI._core = params.String(allele), params.String(core)
+            seqROI._epitopeType = params.String('MHC-II')
+            seqROI._sourceMCHII = params.String(self.method.get())
+            setattr(seqROI, self.method.get(), params.Float(score))
+            outROIs.append(seqROI)
+
+    else:
+      # Each input ROI is labelled with the alleles found inside them
+      inROIs = [roi.clone() for roi in self.inputSequenceROIs.get()]
+      for i in range(len(inROIs)):
+        roiId = str(i + 1)
+        curROI = inROIs[i]
+        curAlleles, curScores = [], []
+        if roiId in epiDic:
+          for core in epiDic[roiId]:
+            for (idxI, epitope) in epiDic[roiId][core]:
+              alleles, scores = [al[0] for al in epiDic[roiId][core][(idxI, epitope)]], \
+                                [al[1] for al in epiDic[roiId][core][(idxI, epitope)]]
+              curAlleles += alleles
+              curScores += scores
+
+        allele, score = '/'.join(curAlleles), min(curScores) if curScores else 0
+        curROI._allelesMHCII = params.String(allele)
+        curROI._sourceMHCII = params.String(method)
+        setattr(curROI, method, params.Float(score))
+        outROIs.append(curROI)
+
+    if len(outROIs) > 0:
+      self._defineOutputs(outputROIs=outROIs)
+
+  ##################### UTILS #####################
 
   def getAvailableAlleles(self):
     methKey = self._mhciMethodsDic[self.getEnumText('method')]
@@ -110,7 +205,10 @@ class ProtMHCIIPrediction(EMProtocol):
 
   def writeInputFasta(self):
     faFile = self._getExtraPath('inputSequence.fa')
-    self.inputSequence.get().exportToFile(faFile)
+    if self.inputSource.get() == 0:
+      self.inputSequence.get().exportToFile(faFile)
+    else:
+      self.inputSequenceROIs.get().exportToFile(faFile, mainSeq=False)
     return os.path.abspath(faFile)
 
   def getSelectedAlleles(self):
@@ -131,23 +229,6 @@ class ProtMHCIIPrediction(EMProtocol):
           fAL.append(allele), fLL.append(length)
     return fAL, fLL
 
-  def mhcStep(self):
-    inFile = self.writeInputFasta()
-    oFile = self.getMHCOutputFile()
-
-    method = self._mhciMethodsDic[self.getEnumText('method')]
-    selAlleles = self.getSelectedAlleles()
-    # todo: lens must be between 11 and 30
-    lenList = self.lengths.get().strip().split(', ')
-
-    allowedAlleles = getAllMHCIIAlleles(method)
-    alList = [allele for allele in selAlleles if allele in allowedAlleles]
-    fullAlStr, fullLenStr = ','.join(alList), ','.join(lenList)
-
-    mhcArgs = f'{method} {fullAlStr} {inFile} {fullLenStr} > {oFile} '
-
-    iedbPlugin.runMHC_II(self, mhcArgs)
-
   def getCoreData(self, coreDic):
     cData = {'Epitope': [], 'Alleles': set([]), 'Score': 0 if self.selType == 1 else 100}
     for (idx, epitope) in coreDic:
@@ -157,53 +238,12 @@ class ProtMHCIIPrediction(EMProtocol):
           cData['Score'], cData['Epitope'] = score, (idx, epitope)
     return cData
 
-  def createOutputStep(self):
-    epiDic = self.parseResults(self.getMHCOutputFile())
-
-    inpSeq = self.inputSequence.get()
-    outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
-    method = self.getEnumText('method')
-
-    for core in epiDic:
-      if self.coreGroup.get():
-        coreData = self.getCoreData(epiDic[core])
-        epitope = coreData['Epitope'][1]
-        idxs = [coreData['Epitope'][0], coreData['Epitope'][0] + len(epitope) - 1]
-        roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
-                          description=f'MHC-II TepiTool epitope')
-        seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
-        seqROI._alleles, seqROI._core = params.String('/'.join(coreData['Alleles'])), params.String(core)
-        seqROI._epitopeType = params.String('MHC-II')
-        seqROI._source = params.String(method)
-        setattr(seqROI, method, params.Float(coreData["Score"]))
-        outROIs.append(seqROI)
-      else:
-        for (idxI, epitope) in epiDic[core]:
-          idxs = [idxI, idxI + len(epitope) - 1]
-          roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
-                            description=f'MHC-II TepiTool epitope')
-
-          alleles, scores = [al[0] for al in epiDic[core][(idxI, epitope)]], \
-                            [al[1] for al in epiDic[core][(idxI, epitope)]]
-          allele, score = '/'.join(alleles), max(scores) if self.selType == 1 else min(scores)
-          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
-          seqROI._alleles, seqROI._core = params.String(allele), params.String(core)
-          seqROI._epitopeType = params.String('MHC-II')
-          seqROI._source = params.String(self.method.get())
-          setattr(seqROI, self.method.get(), params.Float(score))
-          outROIs.append(seqROI)
-
-    if len(outROIs) > 0:
-      self._defineOutputs(outputROIs=outROIs)
-
-  ##################### UTILS #####################
-
   def getMHCOutputFile(self):
-    return os.path.abspath(self._getExtraPath('mhc-I_results.tsv'))
+    return os.path.abspath(self._getExtraPath('mhc-II_results.tsv'))
 
   def parseResults(self, oFile):
     '''Parse the results in the raw_output.tsv file generated by TepiTools and returns a dictionary
-    as {allele: {(position, epitopeString): meanScore}}
+    as {seq_id: {core: {(position, epitopeString): [allele, score]}}}
     '''
     thType = self.selType.get()
     resAr = np.loadtxt(open(oFile, "rb"), delimiter="\t", skiprows=1, dtype=str)
@@ -232,9 +272,32 @@ class ProtMHCIIPrediction(EMProtocol):
     for row in resAr:
       allele, seq_id, pos, _, _, core, peptide, score, rank = row[:9]
       key = (int(pos), peptide)
-      if not core in epiDic:
-        epiDic[core] = {}
-      if not key in epiDic[core]:
-        epiDic[core][key] = []
-      epiDic[core][key].append([allele, float(row[rankIdx])])
+      if not seq_id in epiDic:
+        epiDic[seq_id] = {}
+      if not core in epiDic[seq_id]:
+        epiDic[seq_id][core] = {}
+      if not key in epiDic[seq_id][core]:
+        epiDic[seq_id][core][key] = []
+      epiDic[seq_id][core][key].append([allele, float(row[rankIdx])])
     return epiDic
+
+  def getInputSequences(self):
+    if self.inputSource.get() == 0:
+      return [self.inputSequence.get().getSequence()]
+    else:
+      return [roi.getROISequence() for roi in self.inputSequenceROIs.get()]
+
+  def validate(self):
+    vals = []
+    lens = self.getLenghts()
+    if min(lens) < 11 or max(lens) > 30:
+      vals.append('Length of the epitopes must be between 11 and 30 both included')
+
+    inSeqs = self.getInputSequences()
+    for s in inSeqs:
+      if len(s) < min(lens):
+        vals.append(f'Input sequences must be at least {min(lens)} aminoacids long '
+                    f'(The smallest length you have defined). Please check your input.')
+        break
+    return vals
+

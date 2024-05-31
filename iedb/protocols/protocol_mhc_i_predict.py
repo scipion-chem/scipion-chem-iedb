@@ -37,7 +37,8 @@ from ..constants import MHCI_alleles_dic
 from ..utils import getAllMHCIAlleles
 
 class ProtMHCIPrediction(EMProtocol):
-  """Run a prediction using mhc-i package from IEDB to predict MHC-I epitopes"""
+  """Run a prediction using mhc-i package from IEDB to predict MHC-I epitopes over a sequence
+  or to label a set of sequence ROIs with the alleles found on them"""
   _label = 'mhc-i prediction'
 
   _mhciMethodsDic = {'IEDB recommended': 'netmhcpan_ba', 'Consensus-2.18': 'consensus',
@@ -51,12 +52,23 @@ class ProtMHCIPrediction(EMProtocol):
   def __init__(self, **kwargs):
     EMProtocol.__init__(self, **kwargs)
 
+  def getAvailableLengthList(self):
+    return list(map(str, range(8, 15)))
+
   def _defineParams(self, form):
     form.addSection(label='Input')
     iGroup = form.addGroup('Input')
-    iGroup.addParam('inputSequence', params.PointerParam, pointerClass="Sequence",
-                    label='Input protein sequence: ',
+    iGroup.addParam('inputSource', params.EnumParam, label='Input action: ',
+                    default=0, choices=['Predict over sequence', 'Label sequence ROIs'],
+                    display=params.EnumParam.DISPLAY_HLIST,
+                    help="Whether to predict the MHC-I epitopes present in a sequence and label them with the present"
+                         "alleles or label an already existing SetOfSequenceROIs with the alleles found in them")
+    iGroup.addParam('inputSequence', params.PointerParam, pointerClass="Sequence", allowsNull=True,
+                    label='Input protein sequence: ', condition='inputSource==0',
                     help="Protein sequence to perform the screening on")
+    iGroup.addParam('inputSequenceROIs', params.PointerParam, pointerClass="SetOfSequenceROIs",
+                    label='Input sequence ROIs: ', condition='inputSource==1', allowsNull=True,
+                    help="Set of sequence ROIs to label with the present MHC-I alleles")
 
     pGroup = form.addGroup('Parameters')
     pGroup.addParam('method', params.EnumParam, label='Prediction method: ',
@@ -91,7 +103,7 @@ class ProtMHCIPrediction(EMProtocol):
                     expertLevel=params.LEVEL_ADVANCED,
                     help="Whether to remove duplicate predicted peptides from the output")
     pGroup.addParam('mergeAlleles', params.BooleanParam, label='Merge alleles: ', default=True,
-                    expertLevel=params.LEVEL_ADVANCED,
+                    expertLevel=params.LEVEL_ADVANCED, condition='inputSource==0',
                     help="Merges same epitope sequences predicted to interact with different alleles into the same "
                          "sequence ROI")
 
@@ -99,34 +111,6 @@ class ProtMHCIPrediction(EMProtocol):
   def _insertAllSteps(self):
     self._insertFunctionStep(self.mhcStep)
     self._insertFunctionStep(self.createOutputStep)
-
-  def getAvailableAlleles(self):
-    methKey = self._mhciMethodsDic[self.getEnumText('method')]
-    alleDic = getAllMHCIAlleles(methKey, self.getEnumText('specie'))
-    return list(alleDic.keys())
-
-  def writeInputFasta(self):
-    faFile = self._getExtraPath('inputSequence.fa')
-    self.inputSequence.get().exportToFile(faFile)
-    return os.path.abspath(faFile)
-
-  def getSelectedAlleles(self):
-    '''Get list of alleles to perform the analysis on'''
-    if self.specie.get() != 3 or self.alleleGroup.get() == 3:
-      alList = self.alleleCustom.get().strip().split(', ')
-    else:
-      alList = MHCI_alleles_dic[self.getEnumText('alleleGroup')]
-    return alList
-
-  def filterAlleles(self, alDic, alList, lenList):
-    '''Filters the allowed alleles and lengths from alList and lenList according to alDic and return the allele and
-    length lists necessary to run predict_binding.py'''
-    fAL, fLL = [], []
-    for allele in alList:
-      for length in lenList:
-        if length in alDic[allele]:
-          fAL.append(allele), fLL.append(length)
-    return fAL, fLL
 
   def mhcStep(self):
     inFile = self.writeInputFasta()
@@ -147,51 +131,104 @@ class ProtMHCIPrediction(EMProtocol):
   def createOutputStep(self):
     epiDic = self.parseResults(self.getMHCOutputFile())
 
-    inpSeq = self.inputSequence.get()
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
-    method = self.getEnumText('method')
+    method = f"MHCI_{self.getEnumText('method')}"
 
-    for (idxI, epitope) in epiDic:
-      idxs = [idxI, idxI + len(epitope) - 1]
-      roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
-                        description=f'MHC-I TepiTool epitope')
+    if self.inputSource.get() == 0:
+      inpSeq = self.inputSequence.get()
+      epiDic = epiDic['1']
+      for (idxI, epitope) in epiDic:
+        idxs = [idxI, idxI + len(epitope) - 1]
+        roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
+                          description=f'MHC-I TepiTool epitope')
 
-      if not self.mergeAlleles.get():
-        for allele, score in epiDic[(idxI, epitope)].items():
+        if not self.mergeAlleles.get():
+          for allele, score in epiDic[(idxI, epitope)].items():
+            seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
+            seqROI._allelesMHCI = params.String(allele)
+            seqROI._epitopeType = params.String('MHC-I')
+            seqROI._sourceMHCI = params.String(method)
+            setattr(seqROI, method, params.Float(score))
+
+            outROIs.append(seqROI)
+        else:
+          alleles, scores = list(epiDic[(idxI, epitope)].keys()), list(epiDic[(idxI, epitope)].values())
+          allele, score = '/'.join(alleles), min(scores)
           seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
-          seqROI._alleles = params.Float(score)
+          seqROI._allelesMHCI = params.String(allele)
           seqROI._epitopeType = params.String('MHC-I')
-          seqROI._source = params.String(method)
+          seqROI._sourceMHCI = params.String(method)
           setattr(seqROI, method, params.Float(score))
-
           outROIs.append(seqROI)
-      else:
-        alleles, scores = list(epiDic[(idxI, epitope)].keys()), list(epiDic[(idxI, epitope)].values())
-        allele, score = '/'.join(alleles), min(scores)
-        seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
-        seqROI._alleles = params.String(allele)
-        seqROI._epitopeType = params.String('MHC-I')
-        seqROI._source = params.String(method)
-        setattr(seqROI, method, params.Float(score))
-        outROIs.append(seqROI)
+
+    else:
+      # Each input ROI is labelled with the alleles found inside them
+      inROIs = [roi.clone() for roi in self.inputSequenceROIs.get()]
+      for i in range(len(inROIs)):
+        roiId = str(i + 1)
+        curROI = inROIs[i]
+        curAlleles, curScores = [], []
+        if roiId in epiDic:
+          for (idxI, epitope) in epiDic[roiId]:
+            alleles, scores = list(epiDic[roiId][(idxI, epitope)].keys()), list(epiDic[roiId][(idxI, epitope)].values())
+            curAlleles += alleles
+            curScores += scores
+
+        allele, score = '/'.join(curAlleles), min(curScores) if curScores else 0
+        curROI._allelesMHCI = params.String(allele)
+        curROI._sourceMHCI = params.String(method)
+        setattr(curROI, method, params.Float(score))
+        outROIs.append(curROI)
 
     if len(outROIs) > 0:
       self._defineOutputs(outputROIs=outROIs)
 
   ##################### UTILS #####################
 
+  def getAvailableAlleles(self):
+    methKey = self._mhciMethodsDic[self.getEnumText('method')]
+    alleDic = getAllMHCIAlleles(methKey, self.getEnumText('specie'))
+    return list(alleDic.keys())
+
+  def writeInputFasta(self):
+    faFile = self._getExtraPath('inputSequence.fa')
+    if self.inputSource.get() == 0:
+      self.inputSequence.get().exportToFile(faFile)
+    else:
+      self.inputSequenceROIs.get().exportToFile(faFile, mainSeq=False)
+    return os.path.abspath(faFile)
+
+  def getSelectedAlleles(self):
+    '''Get list of alleles to perform the analysis on'''
+    if self.specie.get() != 3 or self.alleleGroup.get() == 3:
+      alList = self.alleleCustom.get().strip().split(', ')
+    else:
+      alList = MHCI_alleles_dic[self.getEnumText('alleleGroup')]
+    return alList
+
+  def filterAlleles(self, alDic, alList, lenList):
+    '''Filters the allowed alleles and lengths from alList and lenList according to alDic and return the allele and
+    length lists necessary to run predict_binding.py'''
+    fAL, fLL = [], []
+    for allele in alList:
+      for length in lenList:
+        if length in alDic[allele]:
+          fAL.append(allele), fLL.append(length)
+    return fAL, fLL
+
+
   def getMHCOutputFile(self):
     return os.path.abspath(self._getExtraPath('mhc-I_results.tsv'))
 
   def parseResults(self, oFile):
     '''Parse the results in the raw_output.tsv file generated by TepiTools and returns a dictionary
-    as {allele: {(position, epitopeString): meanScore}}
+    as {seq_id: {(position, epitopeString): {allele: score}}}
     '''
     thType = self.selType.get()
     resAr = np.loadtxt(open(oFile, "rb"), delimiter="\t", skiprows=1, dtype=str)
     rankIdx = 9
 
-    # Get the selection of the total results
+    # Get the filtered array of the total results
     if thType == 0:
       scores = resAr[:, rankIdx].astype(float)
       idxSel = scores < self.rank.get()
@@ -214,7 +251,9 @@ class ProtMHCIPrediction(EMProtocol):
     for row in resAr:
       allele, seq_id, pos, _, _, peptide, _, _, ic50, rank = row[:10]
       key = (int(pos), peptide)
-      if not key in epiDic:
-        epiDic[key] = {}
-      epiDic[key][allele] = float(row[rankIdx])
+      if not seq_id in epiDic:
+        epiDic[seq_id] = {}
+      if not key in epiDic[seq_id]:
+        epiDic[seq_id][key] = {}
+      epiDic[seq_id][key][allele] = float(row[rankIdx])
     return epiDic

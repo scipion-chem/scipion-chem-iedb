@@ -62,20 +62,29 @@ def getAllMHCIIAlleles(method, specie='human'):
     alleles = MOUSE_MHCII_ALLELES
   return alleles
 
-def writeInputEpitopeFiles(inputROIs, epFile, separated):
+def getMHCAlleles(roi, mhc):
+  alleles = []
+  if hasattr(roi, '_allelesMHCI') and mhc in ['I', 'combined']:
+    alleles += [getattr(roi, '_allelesMHCI').get().replace('/', ',')]
+
+  if hasattr(roi, '_allelesMHCII') and mhc in ['II', 'combined']:
+    alleles += [getattr(roi, '_allelesMHCII').get().replace('/', ',')]
+  return ','.join(alleles)
+
+def writeInputEpitopeFiles(inputROIs, epFile, separated, mhc):
   outFiles = []
   if separated:
     for roi in inputROIs:
       groupFile = epFile.replace('.tsv', f'_{roi.clone().getObjId()}.tsv')
       with open(groupFile, 'w') as f:
-        alleles = getattr(roi, '_alleles').get().replace('/', ',')
+        alleles = getMHCAlleles(roi, mhc)
         f.write(f'{roi.getROISequence()}\t{alleles}\n')
       outFiles.append(groupFile)
   else:
     epFile = epFile.replace('.tsv', f'_All.tsv')
     with open(epFile, 'w') as f:
       for roi in inputROIs:
-        alleles = getattr(roi, '_alleles').get().replace('/', ',')
+        alleles = getMHCAlleles(roi, mhc)
         f.write(f'{roi.getROISequence()}\t{alleles}\n')
     outFiles.append(epFile)
 
@@ -90,7 +99,7 @@ def translateArea(pops):
   return pops
 
 def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=True):
-  inEpiFiles = writeInputEpitopeFiles(inputROIs, epFile, separated)
+  inEpiFiles = writeInputEpitopeFiles(inputROIs, epFile, separated, mhc)
   fullPopStr = '","'.join(populations)
 
   coveArgs = []
