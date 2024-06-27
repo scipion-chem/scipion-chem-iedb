@@ -109,14 +109,15 @@ def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=Tr
     coveArgs += [f'-p "{fullPopStr}" -c {mhc} -f {epFile} > {oFile} ']
   return coveArgs
 
-def parseCoverageResults(oFile):
+def parseCoverageResults(oFile, norm=True):
   oDic = {}
   with open(oFile) as f:
     [f.readline() for i in range(2)]
     for line in f:
       if line.strip():
         sline = line.split('\t')
-        oDic[sline[0]] = {'coverage': float(sline[1][:-2]), 'average_hit': sline[2], 'pc90': sline[3].strip()}
+        normVal = 100 if norm else 1
+        oDic[sline[0]] = {'coverage': float(sline[1][:-2])/normVal, 'average_hit': sline[2], 'pc90': sline[3].strip()}
       else:
         break
   return oDic
