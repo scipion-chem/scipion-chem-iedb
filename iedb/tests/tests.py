@@ -104,6 +104,23 @@ class TestMHCIIPrediction(BaseImportSeq):
 		self._waitOutput(protMHCII, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protMHCII, 'outputROIs', None))
 
+class TestImmunogenicityPrediction(TestMHCIPrediction):
+	def _runImmunogenicityPrediction(self, protROIs):
+		protImmuno = self.newProtocol(ProtImmunogenicityPrediction)
+
+		protImmuno.inputROIs.set(protROIs)
+		protImmuno.inputROIs.setExtended('outputROIs')
+
+		self.proj.launchProtocol(protImmuno, wait=False)
+		return protImmuno
+
+	def test(self):
+		protMHC = self._runMHCIPrediction()
+		self._waitOutput(protMHC, 'outputROIs', sleepTime=10)
+
+		protImmuno = self._runImmunogenicityPrediction(protMHC)
+		self._waitOutput(protImmuno, 'outputROIs', sleepTime=10)
+		assertHandle(self.assertIsNotNone, getattr(protImmuno, 'outputROIs', None))
 
 class TestMHCPopulationCoverage(TestMHCIIPrediction):
 	def _runMHCCoverage(self, protMHC):

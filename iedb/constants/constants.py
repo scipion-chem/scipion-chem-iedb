@@ -44,6 +44,9 @@ COVE_DIC = {'name': 'population_coverage',    'version': '3.0.2', 'pattern': 'po
 ELLI_DIC = {'name': 'ellipro',    'version': '1.0', 'pattern': 'ellipro',
             'home': 'ELLIPRO_HOME', 'jar': 'ELLIPRO_JAR'}
 
+IMMU_DIC = {'name': 'immunogenicity',    'version': '1.1', 'pattern': 'immunogenicity',
+            'home': 'IMMUNO_HOME', 'tar': 'IMMUNO_TAR'}
+
 READ_URL = 'https://github.com/scipion-chem/scipion-chem-bepipred'
 
 NOINSTALL_WARNING = f'Installation could not be completed because BepiPred download or installation has not been found.\n' \

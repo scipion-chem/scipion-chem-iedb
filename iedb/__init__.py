@@ -71,6 +71,9 @@ class Plugin(pwchemPlugin):
 		cls._defineVar(ELLI_DIC['home'], cls.getDefaultDir(ELLI_DIC))
 		cls._defineVar(ELLI_DIC['jar'], None)
 
+		cls._defineVar(IMMU_DIC['home'], cls.getDefaultDir(IMMU_DIC))
+		cls._defineVar(IMMU_DIC['tar'], None)
+
 	@classmethod
 	def defineBinaries(cls, env):
 		"""This function defines the binaries for each package."""
@@ -103,6 +106,12 @@ class Plugin(pwchemPlugin):
 
 		if cls.checkVarPath(ELLI_DIC, 'jar'):
 			cls._addElliProPackage(env, elliJar=cls.getVar(ELLI_DIC['jar']))
+
+		#  Class I Immunogenicity package
+		if cls.checkVarPath(IMMU_DIC, 'tar'):
+			cls._addImmunogenicityPackage(env, tarPath=cls.getVar(IMMU_DIC['tar']))
+		elif cls.checkVarPath(IMMU_DIC, 'home'):
+			cls._addImmunogenicityPackage(env, coveHome=cls.getVar(IMMU_DIC['home']))
 
 
 	@classmethod
@@ -198,6 +207,26 @@ class Plugin(pwchemPlugin):
 		env.addPackage(ELLI_DIC['name'], version=ELLI_DIC['version'],
 									 commands=[(installationCmd, os.path.join(emHome, ELLI_INSTALLED))], tar='void.tgz',
 									 default=default)
+
+	@classmethod
+	def _addImmunogenicityPackage(cls, env, immunoHome=None, tarPath=None, default=True):
+		""" This function provides the neccessary commands for installing the Class I Immunogenicity program. """
+		IMMUNO_INSTALLED = '%s_installed' % IMMU_DIC['name']
+		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(IMMU_DIC))
+
+		installationCmd = ''
+		if not immunoHome and tarPath:
+			immunoHome = emHome
+			installationCmd += f'tar -xf {tarPath} -C {immunoHome} && ' \
+												 f'mv {immunoHome}/immunogenicity/* {immunoHome} && rm -r {immunoHome}/immunogenicity && '
+
+		if immunoHome != emHome:
+			installationCmd += f"mv {immunoHome}/* {emHome} && rm -r {immunoHome} && "
+		installationCmd += f"touch {IMMUNO_INSTALLED}"
+
+		env.addPackage(IMMU_DIC['name'], version=IMMU_DIC['version'],
+									 commands=[(installationCmd, os.path.join(emHome, IMMUNO_INSTALLED))], tar='void.tgz',
+									 default=default, buildDir=os.path.split(immunoHome)[-1])
 
 
 	@classmethod
@@ -302,6 +331,16 @@ class Plugin(pwchemPlugin):
 		""" Run ElliPro command from a given protocol. """
 		elliHome = cls.getVar(ELLI_DIC["home"])
 		fullProgram = f'java -jar {os.path.join(elliHome, "ElliPro.jar")}'
+		if not popen:
+			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+		else:
+			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
+
+	@classmethod
+	def runImmunogenicity(cls, protocol, args, cwd=None, popen=False):
+		""" Run immunogenicity command from a given protocol. """
+		immuHome = cls.getVar(IMMU_DIC["home"])
+		fullProgram = f'python {os.path.join(immuHome, "predict_immunogenicity.py")}'
 		if not popen:
 			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
 		else:
