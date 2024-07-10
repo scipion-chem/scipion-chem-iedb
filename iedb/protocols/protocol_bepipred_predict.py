@@ -180,4 +180,8 @@ class ProtBepiPredPrediction(EMProtocol):
             curEp, iniEp, curSoft, scores = '', -1, 0, []
 
         i += 1
+
+    if not self.setSize.get() or (len(curEp) >= minLen and len(curEp) <= maxLen):
+      # Save current epitope if the len conditions are met
+      epiDic[protId][iniEp] = [curEp, sum(scores) / len(scores)]
     return epiDic
