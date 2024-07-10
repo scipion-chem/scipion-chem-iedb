@@ -147,7 +147,7 @@ class ProtMHCIPrediction(EMProtocol):
             seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
             seqROI._allelesMHCI = params.String(allele)
             seqROI._epitopeType = params.String('MHC-I')
-            seqROI._sourceMHCI = params.String(method)
+            seqROI._source = params.String(method)
             setattr(seqROI, method, params.Float(score))
 
             outROIs.append(seqROI)
@@ -157,7 +157,7 @@ class ProtMHCIPrediction(EMProtocol):
           seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
           seqROI._allelesMHCI = params.String(allele)
           seqROI._epitopeType = params.String('MHC-I')
-          seqROI._sourceMHCI = params.String(method)
+          seqROI._source = params.String(method)
           setattr(seqROI, method, params.Float(score))
           outROIs.append(seqROI)
 

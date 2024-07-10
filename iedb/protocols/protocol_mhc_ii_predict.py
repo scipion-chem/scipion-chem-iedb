@@ -36,6 +36,8 @@ from .. import Plugin as iedbPlugin
 from ..constants import MHCII_alleles_dic
 from ..utils import getAllMHCIIAlleles
 
+SEQ, SEQROIS = 0, 1
+
 class ProtMHCIIPrediction(EMProtocol):
   """Run a prediction using mhc-ii package from IEDB to predict MHC-II epitopes"""
   _label = 'mhc-ii prediction'
@@ -58,7 +60,7 @@ class ProtMHCIIPrediction(EMProtocol):
     form.addSection(label='Input')
     iGroup = form.addGroup('Input')
     iGroup.addParam('inputSource', params.EnumParam, label='Input action: ',
-                    default=0, choices=['Predict over sequence', 'Label sequence ROIs'],
+                    default=SEQ, choices=['Predict over sequence', 'Label sequence ROIs'],
                     display=params.EnumParam.DISPLAY_HLIST,
                     help="Whether to predict the MHC-I epitopes present in a sequence and label them with the present"
                          "alleles or label an already existing SetOfSequenceROIs with the alleles found in them")
@@ -141,7 +143,7 @@ class ProtMHCIIPrediction(EMProtocol):
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
     method = f"MHCII_{self.getEnumText('method')}"
 
-    if self.inputSource.get() == 0:
+    if self.inputSource.get() == SEQ:
       epiDic = epiDic['1']
       for core in epiDic:
         if self.coreGroup.get():
@@ -168,8 +170,8 @@ class ProtMHCIIPrediction(EMProtocol):
             seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
             seqROI._allelesMHCII, seqROI._core = params.String(allele), params.String(core)
             seqROI._epitopeType = params.String('MHC-II')
-            seqROI._sourceMCHII = params.String(self.method.get())
-            setattr(seqROI, self.method.get(), params.Float(score))
+            seqROI._source = params.String(method)
+            setattr(seqROI, method, params.Float(score))
             outROIs.append(seqROI)
 
     else:
