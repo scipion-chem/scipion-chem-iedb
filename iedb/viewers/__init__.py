@@ -5,3 +5,4 @@
 # **************************************************************************
 
 from .viewerBepiPred import ViewerBepiPred
+from .viewerElliPro import ViewerElliPro
