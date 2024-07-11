@@ -94,6 +94,10 @@ class ProtMHCIIPrediction(EMProtocol):
                     expertLevel=params.LEVEL_ADVANCED,
                     help="Whether to group the predicted peptides with the same 9mer core. The one with the better "
                          "score will be chosen as representant")
+    sGroup.addParam('mergeDup', params.BooleanParam, label='Merge duplicate peptides: ', default=True,
+                    expertLevel=params.LEVEL_ADVANCED, condition=f'inputSource=={SEQ}',
+                    help="Whether to merge duplicate predicted peptides from the output")
+
     sGroup.addParam('selType', params.EnumParam, label='Select output peptides by: ',
                     default=0, choices=self._selTypes,
                     help="Select output peptides in the chosen manner")
@@ -108,9 +112,6 @@ class ProtMHCIIPrediction(EMProtocol):
     sGroup.addParam('topN', params.IntParam, label='Top threshold: ', default=5, condition='selType==4',
                     help="Select top x peptides based on percentile rank")
 
-    pGroup.addParam('remDup', params.BooleanParam, label='Remove duplicate peptides: ', default=True,
-                    expertLevel=params.LEVEL_ADVANCED, condition='inputSource==0',
-                    help="Whether to remove duplicate predicted peptides from the output")
 
 
   def _insertAllSteps(self):
@@ -144,35 +145,24 @@ class ProtMHCIIPrediction(EMProtocol):
     method = f"MHCII_{self.getEnumText('method')}"
 
     if self.inputSource.get() == SEQ:
-      epiDic = epiDic['1']
+      epiDic, epitopesList = epiDic['1'], []
       for core in epiDic:
-        if self.coreGroup.get():
-          coreData = self.getCoreData(epiDic[core])
-          epitope = coreData['Epitope'][1]
-          idxs = [coreData['Epitope'][0], coreData['Epitope'][0] + len(epitope) - 1]
-          roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
-                            description=f'MHC-II TepiTool epitope')
-          seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
-          seqROI._allelesMHCII, seqROI._core = params.String('/'.join(coreData['Alleles'])), params.String(core)
-          seqROI._epitopeType = params.String('MHC-II')
-          seqROI._sourceMHCII = params.String(method)
-          setattr(seqROI, method, params.Float(coreData["Score"]))
-          outROIs.append(seqROI)
-        else:
-          for (idxI, epitope) in epiDic[core]:
-            idxs = [idxI, idxI + len(epitope) - 1]
-            roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
-                              description=f'MHC-II TepiTool epitope')
+        epitopesList += self.mergeCoreData(epiDic[core], merge=self.coreGroup.get())
 
-            alleles, scores = [al[0] for al in epiDic[core][(idxI, epitope)]], \
-                              [al[1] for al in epiDic[core][(idxI, epitope)]]
-            allele, score = '/'.join(alleles), max(scores) if self.selType == 1 else min(scores)
-            seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
-            seqROI._allelesMHCII, seqROI._core = params.String(allele), params.String(core)
-            seqROI._epitopeType = params.String('MHC-II')
-            seqROI._source = params.String(method)
-            setattr(seqROI, method, params.Float(score))
-            outROIs.append(seqROI)
+      if self.mergeDup.get():
+        epitopesList = self.mergeDupEpitopes(epitopesList)
+
+      for (idxI, epitope), alleles, score in epitopesList:
+        idxs = [idxI, idxI + len(epitope) - 1]
+        roiSeq = Sequence(sequence=epitope, name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
+                          description=f'MHC-II TepiTool epitope')
+
+        seqROI = SequenceROI(sequence=inpSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
+        seqROI._allelesMHCII = params.String(alleles)
+        seqROI._epitopeType = params.String('MHC-II')
+        seqROI._source = params.String(method)
+        setattr(seqROI, method, params.Float(score))
+        outROIs.append(seqROI)
 
     else:
       # Each input ROI is labelled with the alleles found inside them
@@ -231,14 +221,46 @@ class ProtMHCIIPrediction(EMProtocol):
           fAL.append(allele), fLL.append(length)
     return fAL, fLL
 
-  def getCoreData(self, coreDic):
-    cData = {'Epitope': [], 'Alleles': set([]), 'Score': 0 if self.selType == 1 else 100}
-    for (idx, epitope) in coreDic:
-      for (allele, score) in coreDic[(idx, epitope)]:
-        cData['Alleles'].add(allele)
-        if (score > cData['Score'] and self.selType == 1) or (score < cData['Score'] and self.selType != 1):
-          cData['Score'], cData['Epitope'] = score, (idx, epitope)
-    return cData
+  def mergeCoreData(self, coreDic, merge=True):
+    '''Merges the epitopes containing the best core. Alleles are appended and the best score is taken.
+    :param coreDic: dic containing the same core epitopes as {(idx, epitopeStr): [(alleles, score)]}
+    :return: list of epitopes described as [ ((idx, epitopeStr), alleles, score), ... ]
+    '''
+    allEpitopes = []
+    key, alleles, score = (None, None), set([]), 0 if self.selType == 1 else 100
+    for newKey in coreDic:
+      for (newAlleles, newScore) in coreDic[newKey]:
+        if merge:
+          alleles.add(newAlleles)
+          if (newScore > score and self.selType == 1) or (newScore < score and self.selType != 1):
+            score, key = newScore, newKey
+        else:
+          allEpitopes.append((newKey, newAlleles, newScore))
+    if merge:
+      allEpitopes.append((key, list(alleles), score))
+    return allEpitopes
+
+  def mergeDupEpitopes(self, epitopeList):
+    '''Merge the data of those epitopes whose sequence is equal. Alleles are appended, best score is kept
+    :param epitopeList: list of epitopes as [ ((idx, epitopeStr), alleles, score), ... ]
+    :return: list of non-duplicated epitopes as [ ((idx, epitopeStr), alleles, score), ... ]
+    '''
+    uniEpitopes = {}
+    for (key, newAlleles, newScore) in epitopeList:
+       if key in uniEpitopes:
+         alleles, score = uniEpitopes[key]
+         newScore = newScore if (newScore > score and self.selType == 1) or (newScore < score and self.selType != 1) \
+           else score
+         newAlleles += alleles
+
+       uniEpitopes[key] = (newAlleles, newScore)
+
+    outEps = []
+    for key, (alleles, score) in uniEpitopes.items():
+      alleles = list(set(alleles))
+      outEps.append((key, alleles, score))
+
+    return outEps
 
   def getMHCOutputFile(self):
     return os.path.abspath(self._getExtraPath('mhc-II_results.tsv'))
