@@ -36,7 +36,7 @@ from ..constants import POP_DIC
 from ..utils import translateArea, buildMHCCoverageArgs, parseCoverageResults
 
 
-class ProtMHCIIPopulationCoverage(EMProtocol):
+class ProtMHCPopulationCoverage(EMProtocol):
   """Calculates the population coverage of a series of MHC epitopes"""
   _label = 'mhc population coverage'
 
@@ -53,7 +53,7 @@ class ProtMHCIIPopulationCoverage(EMProtocol):
 
     iGroup.addParam('mhc', params.EnumParam, label='MHC type: ', display=params.EnumParam.DISPLAY_HLIST,
                     default=2, choices=['I', 'II', 'combined'],
-                    help="Host specie  to predict the MHC-II epitopes on.")
+                    help="Whether to predict the coverage on MHC of type I, II or combined.")
     iGroup.addParam('eachROI', params.BooleanParam, label='Perform analysis for each ROI: ', default=True,
                     help="Perform the analysis for each ROI separately")
     iGroup.addParam('allROI', params.BooleanParam, label='Perform analysis for all ROIs together: ', default=True,
