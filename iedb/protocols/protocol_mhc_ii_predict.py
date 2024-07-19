@@ -87,7 +87,8 @@ class ProtMHCIIPrediction(EMProtocol):
                     help="Host specie  to predict the MHC-II epitopes on.")
     pGroup.addParam('lengths', params.StringParam, label='Peptide lengths: ', default='15',
                     help="Available lengths to include in the analysis. "
-                         "You can include several lenght as comma separated  (11, 12,13)")
+                         "You can include several lengths as comma separated  (11, 12,13)"
+                         f"Lenght limits are [{self.MINLEN}, {self.MAXLEN}]")
 
     pGroup.addParam('alleleGroup', params.EnumParam, label='Select allele groups: ', condition='specie==0',
                     default=1, choices=self._alleleGroups,
@@ -219,16 +220,6 @@ class ProtMHCIIPrediction(EMProtocol):
     else:
       alList = MHCII_alleles_dic[self.getEnumText('alleleGroup')]
     return alList
-
-  def filterAlleles(self, alDic, alList, lenList):
-    '''Filters the allowed alleles and lengths from alList and lenList according to alDic and return the allele and
-    length lists necessary to run predict_binding.py'''
-    fAL, fLL = [], []
-    for allele in alList:
-      for length in lenList:
-        if length in alDic[allele]:
-          fAL.append(allele), fLL.append(length)
-    return fAL, fLL
 
   def mergeCoreData(self, coreDic, merge=True):
     '''Merges the epitopes containing the best core. Alleles are appended and the best score is taken.

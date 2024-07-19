@@ -65,7 +65,9 @@ class ProtMHCIPrediction(ProtMHCIIPrediction):
                     default=3, choices=self._species,
                     help="Host specie  to predict the MHC-I epitopes on.")
     pGroup.addParam('lengths', params.StringParam, label='Peptide lengths: ', default='9',
-                    help="Available lengths to include in the analysis.")
+                    help="Available lengths to include in the analysis."
+                         "You can include several lengths as comma separated  (11, 12,13)"
+                         f"Lenght limits are [{self.MINLEN}, {self.MAXLEN}]")
 
     pGroup.addParam('alleleGroup', params.EnumParam, label='Select allele groups: ', condition='specie==3',
                     default=2, choices=self._alleleGroups,
@@ -103,7 +105,7 @@ class ProtMHCIPrediction(ProtMHCIIPrediction):
 
     method = self._mhciMethodsDic[self.getEnumText('method')]
     selAlleles = self.getSelectedAlleles()
-    lenList = self.lengths.get().strip().split(', ')
+    lenList = self.getLenghts()
 
     alDic = getAllMHCIAlleles(method, specie=self.getEnumText('specie').lower())
     fullAlList, fullLenList = self.filterAlleles(alDic, selAlleles, lenList)
@@ -185,6 +187,16 @@ class ProtMHCIPrediction(ProtMHCIIPrediction):
     else:
       alList = MHCI_alleles_dic[self.getEnumText('alleleGroup')]
     return alList
+
+  def filterAlleles(self, alDic, alList, lenList):
+    '''Filters the allowed alleles and lengths from alList and lenList according to alDic and return the allele and
+    length lists necessary to run predict_binding.py'''
+    fAL, fLL = [], []
+    for allele in alList:
+      for length in lenList:
+        if str(length) in alDic[allele]:
+          fAL.append(allele), fLL.append(str(length))
+    return fAL, fLL
 
   def getMHCOutputFile(self):
     return os.path.abspath(self._getExtraPath('mhc-I_results.tsv'))
