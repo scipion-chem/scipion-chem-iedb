@@ -23,38 +23,35 @@
 # *  e-mail address 'scipion@cnb.csic.es'
 # *
 # **************************************************************************
-import os, webbrowser
 
-from pyworkflow.protocol import params, Protocol
+from pwchem.viewers import SequenceGeneralViewer, ViewerGeneralStructROIs
+from pwchem.objects import SetOfSequenceROIs
 
-from pwchem.viewers.viewers_sequences import SequenceGeneralViewer
+from ..protocols import ProtElliProPrediction
 
-from ..protocols import ProtBepiPredPrediction
+class ViewerElliPro(SequenceGeneralViewer, ViewerGeneralStructROIs):
+  _label = 'ElliPro viewer'
+  _targets = [ProtElliProPrediction]
+  _seqOutput = [SetOfSequenceROIs]
 
-class ViewerBepiPred(SequenceGeneralViewer):
-  _label = 'BepiPred viewer'
-  _targets = [ProtBepiPredPrediction]
-
-  def _defineParams(self, form):
-    super()._defineParams(form)
-    group = form.addGroup('BepiPred scores view')
-    group.addParam('displayBepiPred', params.LabelParam,
-                   label='Display with BepiPred scores: ',
-                   help='Display html with raw BepiPred scores')
+  def __init__(self, **kwargs):
+    super().__init__(**kwargs)
 
   def _getVisualizeDict(self):
-    vDic = super()._getVisualizeDict()
-    vDic.update({'displayBepiPred': self._showBepiPred})
+    vDic = SequenceGeneralViewer._getVisualizeDict(self)
+    vDic.update(ViewerGeneralStructROIs._getVisualizeDict(self))
     return vDic
 
-  def _showBepiPred(self, paramName=None):
-      htmlFile = self.protocol._getExtraPath('output_interactive_figures.html')
-      webbrowser.open(htmlFile)
+  def _defineParams(self, form):
+    SequenceGeneralViewer._defineParams(self, form)
+    ViewerGeneralStructROIs._defineParams(self, form)
 
-  def getOutDir(self):
-    return os.path.abspath(self.getProtocol()._getExtraPath()
-                           if self.getProtocol() else self.getProject().getTmpPath())
-
-  def getProtocol(self):
-    if hasattr(self, 'protocol') and isinstance(self.protocol, Protocol):
+  def getOutSequences(self):
+    if self.checkIfProtocol():
+      for oAttr in self.protocol.iterOutputAttributes():
+        for oType in self._seqOutput:
+          if isinstance(getattr(self.protocol, oAttr[0]), oType):
+            return getattr(self.protocol, oAttr[0])
+    else:
       return self.protocol
+

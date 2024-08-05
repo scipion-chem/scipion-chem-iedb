@@ -24,7 +24,10 @@
 # *
 # **************************************************************************
 
+import os
+
 from iedb import Plugin
+from iedb.constants import POP_DIC
 
 def getAllelesFile(mhc, method):
   return Plugin.getPluginHome(f'constants/alleles-{mhc}/{method}_alleles.txt')
@@ -58,3 +61,63 @@ def getAllMHCIIAlleles(method, specie='human'):
     from ..constants import MOUSE_MHCII_ALLELES
     alleles = MOUSE_MHCII_ALLELES
   return alleles
+
+def getMHCAlleles(roi, mhc):
+  alleles = []
+  if hasattr(roi, '_allelesMHCI') and mhc in ['I', 'combined']:
+    alleles += [getattr(roi, '_allelesMHCI').get().replace('/', ',')]
+
+  if hasattr(roi, '_allelesMHCII') and mhc in ['II', 'combined']:
+    alleles += [getattr(roi, '_allelesMHCII').get().replace('/', ',')]
+  return ','.join(alleles)
+
+def writeInputEpitopeFiles(inputROIs, epFile, separated, mhc):
+  outFiles = []
+  if separated:
+    for roi in inputROIs:
+      groupFile = epFile.replace('.tsv', f'_{roi.clone().getObjId()}.tsv')
+      with open(groupFile, 'w') as f:
+        alleles = getMHCAlleles(roi, mhc)
+        f.write(f'{roi.getROISequence()}\t{alleles}\n')
+      outFiles.append(groupFile)
+  else:
+    epFile = epFile.replace('.tsv', f'_All.tsv')
+    with open(epFile, 'w') as f:
+      for roi in inputROIs:
+        alleles = getMHCAlleles(roi, mhc)
+        f.write(f'{roi.getROISequence()}\t{alleles}\n')
+    outFiles.append(epFile)
+
+  return outFiles
+
+def translateArea(pops):
+  if 'Area' in pops:
+    pops.remove('Area')
+    pops += list(POP_DIC['Area'].keys())
+
+  pops.sort()
+  return pops
+
+def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=True):
+  inEpiFiles = writeInputEpitopeFiles(inputROIs, epFile, separated, mhc)
+  fullPopStr = '","'.join(populations)
+
+  coveArgs = []
+  for epFile in inEpiFiles:
+    epBase = os.path.basename(epFile)
+    oFile = os.path.join(oDir, epBase.replace('.tsv', '_results.tsv'))
+    coveArgs += [f'-p "{fullPopStr}" -c {mhc} -f {epFile} > {oFile} ']
+  return coveArgs
+
+def parseCoverageResults(oFile, norm=True):
+  oDic = {}
+  with open(oFile) as f:
+    [f.readline() for i in range(2)]
+    for line in f:
+      if line.strip():
+        sline = line.split('\t')
+        normVal = 100 if norm else 1
+        oDic[sline[0]] = {'coverage': float(sline[1][:-2])/normVal, 'average_hit': sline[2], 'pc90': sline[3].strip()}
+      else:
+        break
+  return oDic

@@ -68,6 +68,12 @@ class Plugin(pwchemPlugin):
 		cls._defineVar(COVE_DIC['home'], cls.getDefaultDir(COVE_DIC))
 		cls._defineVar(COVE_DIC['tar'], None)
 
+		cls._defineVar(ELLI_DIC['home'], cls.getDefaultDir(ELLI_DIC))
+		cls._defineVar(ELLI_DIC['jar'], None)
+
+		cls._defineVar(IMMU_DIC['home'], cls.getDefaultDir(IMMU_DIC))
+		cls._defineVar(IMMU_DIC['tar'], None)
+
 	@classmethod
 	def defineBinaries(cls, env):
 		"""This function defines the binaries for each package."""
@@ -98,10 +104,19 @@ class Plugin(pwchemPlugin):
 		elif cls.checkVarPath(COVE_DIC, 'home'):
 			cls._addCoveragePackage(env, coveHome=cls.getVar(COVE_DIC['home']))
 
+		if cls.checkVarPath(ELLI_DIC, 'jar'):
+			cls._addElliProPackage(env, elliJar=cls.getVar(ELLI_DIC['jar']))
+
+		#  Class I Immunogenicity package
+		if cls.checkVarPath(IMMU_DIC, 'tar'):
+			cls._addImmunogenicityPackage(env, tarPath=cls.getVar(IMMU_DIC['tar']))
+		elif cls.checkVarPath(IMMU_DIC, 'home'):
+			cls._addImmunogenicityPackage(env, coveHome=cls.getVar(IMMU_DIC['home']))
+
 
 	@classmethod
 	def _addBepiPredPackage(cls, env, bepiHome=None, zipPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing BepiPred. """
 		BEPIPRED_INSTALLED = '%s_installed' % BEPIPRED_DIC['name']
 
 		installationCmd = ''
@@ -112,7 +127,7 @@ class Plugin(pwchemPlugin):
 
 		installationCmd += f"cd {bepiHome} && sed -i 's/^torch==/#torch==/g' requirements.txt && "
 		installationCmd += f"conda create -y -n {cls.getEnvName(BEPIPRED_DIC)} " \
-											 f"python=3.9 --file requirements.txt && "
+											 f"python=3.9 --file requirements.txt -c conda-forge && "
 		installationCmd += f"touch {BEPIPRED_INSTALLED}"
 
 		env.addPackage(BEPIPRED_DIC['name'], version=BEPIPRED_DIC['version'],
@@ -121,7 +136,7 @@ class Plugin(pwchemPlugin):
 
 	@classmethod
 	def _addMHCIPackage(cls, env, mhciHome=None, tarPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing the MHC-I prediction program. """
 		MHCI_INSTALLED = '%s_installed' % MHCI_DIC['name']
 		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCI_DIC))
 
@@ -142,7 +157,7 @@ class Plugin(pwchemPlugin):
 
 	@classmethod
 	def _addMHCIIPackage(cls, env, mhciiHome=None, tarPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing the MHC-II prediction program. """
 		MHCII_INSTALLED = '%s_installed' % MHCII_DIC['name']
 		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(MHCII_DIC))
 
@@ -163,7 +178,7 @@ class Plugin(pwchemPlugin):
 
 	@classmethod
 	def _addCoveragePackage(cls, env, coveHome=None, tarPath=None, default=True):
-		""" This function provides the neccessary commands for installing AutoDock. """
+		""" This function provides the neccessary commands for installing the MHC coverage program. """
 		COVE_INSTALLED = '%s_installed' % COVE_DIC['name']
 		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(COVE_DIC))
 
@@ -182,6 +197,36 @@ class Plugin(pwchemPlugin):
 									 commands=[(installationCmd, os.path.join(emHome, COVE_INSTALLED))], tar='void.tgz',
 									 default=default, buildDir=os.path.split(coveHome)[-1])
 
+	@classmethod
+	def _addElliProPackage(cls, env, elliJar, default=True):
+		""" This function provides the neccessary commands for installing ElliPro. """
+		ELLI_INSTALLED = '%s_installed' % ELLI_DIC['name']
+		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(ELLI_DIC))
+
+		installationCmd = f"mv {elliJar} {emHome} && cd {emHome} && touch {ELLI_INSTALLED}"
+		env.addPackage(ELLI_DIC['name'], version=ELLI_DIC['version'],
+									 commands=[(installationCmd, os.path.join(emHome, ELLI_INSTALLED))], tar='void.tgz',
+									 default=default)
+
+	@classmethod
+	def _addImmunogenicityPackage(cls, env, immunoHome=None, tarPath=None, default=True):
+		""" This function provides the neccessary commands for installing the Class I Immunogenicity program. """
+		IMMUNO_INSTALLED = '%s_installed' % IMMU_DIC['name']
+		emHome = os.path.join(emConfig.EM_ROOT, cls.getEnvName(IMMU_DIC))
+
+		installationCmd = ''
+		if not immunoHome and tarPath:
+			immunoHome = emHome
+			installationCmd += f'tar -xf {tarPath} -C {immunoHome} && ' \
+												 f'mv {immunoHome}/immunogenicity/* {immunoHome} && rm -r {immunoHome}/immunogenicity && '
+
+		if immunoHome != emHome:
+			installationCmd += f"mv {immunoHome}/* {emHome} && rm -r {immunoHome} && "
+		installationCmd += f"touch {IMMUNO_INSTALLED}"
+
+		env.addPackage(IMMU_DIC['name'], version=IMMU_DIC['version'],
+									 commands=[(installationCmd, os.path.join(emHome, IMMUNO_INSTALLED))], tar='void.tgz',
+									 default=default, buildDir=os.path.split(immunoHome)[-1])
 
 
 	@classmethod
@@ -272,10 +317,30 @@ class Plugin(pwchemPlugin):
 			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
 
 	@classmethod
-	def runPopulationCoverage(cls, protocol, args, cwd=None, popen=False):
+	def runPopulationCoverage(cls, args, protocol=None, cwd=None, popen=False):
 		""" Run population coverage command from a given protocol. """
 		coveHome = cls.getVar(COVE_DIC["home"])
 		fullProgram = f'python {os.path.join(coveHome, "calculate_population_coverage.py")}'
+		if not popen and protocol:
+			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+		else:
+			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
+
+	@classmethod
+	def runElliPro(cls, protocol, args, cwd=None, popen=False):
+		""" Run ElliPro command from a given protocol. """
+		elliHome = cls.getVar(ELLI_DIC["home"])
+		fullProgram = f'java -jar {os.path.join(elliHome, "ElliPro.jar")}'
+		if not popen:
+			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+		else:
+			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
+
+	@classmethod
+	def runImmunogenicity(cls, protocol, args, cwd=None, popen=False):
+		""" Run immunogenicity command from a given protocol. """
+		immuHome = cls.getVar(IMMU_DIC["home"])
+		fullProgram = f'python {os.path.join(immuHome, "predict_immunogenicity.py")}'
 		if not popen:
 			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
 		else:
