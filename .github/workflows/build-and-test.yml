@@ -70,13 +70,14 @@ jobs:
     - name: Download & install BepiPred
       working-directory: ${{ github.workspace }}/../
       env:
-        BEPIPRED_ZIP_NAME: bcell.tar.gz
+        BEPIPRED_ZIP_NAME: BepiPred-3.0.tar.gz
+        BEPIPRED_TARGET_FOLDER_NAME: BepiPred-3.0
       run: |
         wget -O $BEPIPRED_ZIP_NAME https://downloads.iedb.org/tools/bcell/3.0/IEDB_BCell-3.0.tar.gz
         tar -xf $BEPIPRED_ZIP_NAME
-        ls
-        false
-        echo "BEPIPRED_HOME = ${{ github.workspace }}/../$BEPIPRED_ZIP_NAME" >> scipion/config/scipion.conf
+        mv bcell_standalone $BEPIPRED_TARGET_FOLDER_NAME
+        rm $BEPIPRED_ZIP_NAME
+        echo "BEPIPRED_HOME = ${{ github.workspace }}/../$BEPIPRED_TARGET_FOLDER_NAME" >> scipion/config/scipion.conf
 
     - name: Install plugin from pull request
       working-directory: ${{ github.workspace }}
