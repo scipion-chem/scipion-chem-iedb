@@ -12,9 +12,11 @@ jobs:
       working-directory: ${{ github.workspace }}/../
       env:
         BEPIPRED_ZIP_NAME: bcell.tar.gz
+        BEPIPRED_TARGET_FOLDER_NAME: bcell
       run: |
         wget -O $BEPIPRED_ZIP_NAME https://downloads.iedb.org/tools/bcell/3.0/IEDB_BCell-3.0.tar.gz
         tar -xf $BEPIPRED_ZIP_NAME
+        mv bcell_standalone $BEPIPRED_TARGET_FOLDER_NAME
         ls
         false
     
