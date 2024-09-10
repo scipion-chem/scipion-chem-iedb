@@ -30,6 +30,9 @@ jobs:
         activate-environment: scipion3
         python-version: "3.8"
     
+    - name: Test 1
+      run: conda info --envs
+    
     - name: Install Scipion
       working-directory: ${{ github.workspace }}/../
       run: |
@@ -37,6 +40,9 @@ jobs:
         pip install --user scipion-installer
         python3 -m scipioninstaller -conda -noXmipp -noAsk scipion
         echo "SCIPION_CANCEL_XMIPP_BINDING_WARNING = True" >> scipion/config/scipion.conf
+    
+    - name: Test 2
+      run: conda info --envs
     
     # Checkout to Pull Request branch if exists, by default stays in devel
     - name: Install scipion-chem (in branch ${{ github.head_ref }} if exists)
@@ -50,6 +56,9 @@ jobs:
           cd $REPO_NAME && git checkout $BRANCH_NAME && cd -
         fi
         scipion/scipion3 installp -p $REPO_NAME --devel
+    
+    - name: Test 3
+      run: conda info --envs
     
     - name: Checkout repository
       uses: actions/checkout@main
@@ -73,6 +82,9 @@ jobs:
       run: |
         pip cache purge
         ../scipion/scipion3 installp -p . --devel
+    
+    - name: Test 4
+      run: conda info --envs
 
     - name: Run tests
       working-directory: ${{ github.workspace }}/${{ vars.FOLDER_WITH_VERSION }}
