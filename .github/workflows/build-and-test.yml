@@ -60,7 +60,7 @@ jobs:
         BEPIPRED_ZIP_NAME: bcell.zip
       run: |
         wget -O $BEPIPRED_ZIP_NAME https://downloads.iedb.org/tools/bcell/3.0/IEDB_BCell-3.0.tar.gz
-        echo "BEPIPRED_ZIP = ${{ github.workspace }}/$BEPIPRED_ZIP_NAME" >> scipion/config/scipion.conf
+        echo "BEPIPRED_ZIP = ${{ github.workspace }}/$BEPIPRED_ZIP_NAME" >> ${{ github.workspace }}/../scipion/config/scipion.conf
 
     - name: Install plugin from pull request
       working-directory: ${{ github.workspace }}
