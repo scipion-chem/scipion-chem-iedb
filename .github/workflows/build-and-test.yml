@@ -8,6 +8,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: TMP test
+      working-directory: ${{ github.workspace }}/../
+      env:
+        BEPIPRED_ZIP_NAME: bcell.tar.gz
+      run: |
+        wget -O $BEPIPRED_ZIP_NAME https://downloads.iedb.org/tools/bcell/3.0/IEDB_BCell-3.0.tar.gz
+        tar -xf $BEPIPRED_ZIP_NAME
+        ls
+        false
+    
     - name: Free Disk Space (Ubuntu only)
       uses: jlumbroso/free-disk-space@main
 
