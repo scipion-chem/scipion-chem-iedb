@@ -127,7 +127,7 @@ class Plugin(pwchemPlugin):
 
 		installationCmd += f"cd {bepiHome} && sed -i 's/^torch==/#torch==/g' requirements.txt && "
 		installationCmd += f"conda create -y -n {cls.getEnvName(BEPIPRED_DIC)} python=3.9 && "
-		installationCmd += f"conda activate {cls.getEnvName(BEPIPRED_DIC)} && pip install requirements.txt && "
+		installationCmd += f"{cls.getCondaActivationCmd()}conda activate {cls.getEnvName(BEPIPRED_DIC)} && pip install requirements.txt && "
 		installationCmd += f"touch {BEPIPRED_INSTALLED}"
 
 		env.addPackage(BEPIPRED_DIC['name'], version=BEPIPRED_DIC['version'],
