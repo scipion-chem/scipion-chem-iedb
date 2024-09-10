@@ -44,11 +44,11 @@ class BaseImportSeq(BaseTest):
 		cls.ds = DataSet.getDataSet('model_building_tutorial')
 		setupTestProject(cls)
 
-		cls.__runImportSeq()
+		cls._runImportSeq()
 		cls._waitOutput(cls.protImportSeq, 'outputSequences', sleepTime=5)
 
 	@classmethod
-	def __runImportSeq(cls):
+	def _runImportSeq(cls):
 		kwargs = {
 			'inputSequenceName': cls.NAME,
 			'inputSequenceDescription': cls.DESCRIPTION,
@@ -61,7 +61,7 @@ class BaseImportSeq(BaseTest):
 
 
 class TestBepiPredPrediction(BaseImportSeq):
-	def __runBepiPredPrediction(self):
+	def _runBepiPredPrediction(self):
 		protBepiPred = self.newProtocol(ProtBepiPredPrediction)
 
 		protBepiPred.inputSequence.set(self.protImportSeq)
@@ -71,12 +71,12 @@ class TestBepiPredPrediction(BaseImportSeq):
 		return protBepiPred
 
 	def test(self):
-		protBepiPred = self.__runBepiPredPrediction()
+		protBepiPred = self._runBepiPredPrediction()
 		self._waitOutput(protBepiPred, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protBepiPred, 'outputROIs', None))
 
 class TestMHCIPrediction(BaseImportSeq):
-	def __runMHCIPrediction(self):
+	def _runMHCIPrediction(self):
 		protMHCI = self.newProtocol(ProtMHCIPrediction)
 
 		protMHCI.inputSequence.set(self.protImportSeq)
@@ -86,12 +86,12 @@ class TestMHCIPrediction(BaseImportSeq):
 		return protMHCI
 
 	def test(self):
-		protMHCI = self.__runMHCIPrediction()
+		protMHCI = self._runMHCIPrediction()
 		self._waitOutput(protMHCI, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protMHCI, 'outputROIs', None))
 
 class TestMHCIIPrediction(BaseImportSeq):
-	def __runMHCIIPrediction(self):
+	def _runMHCIIPrediction(self):
 		protMHCII = self.newProtocol(ProtMHCIIPrediction)
 
 		protMHCII.inputSequence.set(self.protImportSeq)
@@ -101,12 +101,12 @@ class TestMHCIIPrediction(BaseImportSeq):
 		return protMHCII
 
 	def test(self):
-		protMHCII = self.__runMHCIIPrediction()
+		protMHCII = self._runMHCIIPrediction()
 		self._waitOutput(protMHCII, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protMHCII, 'outputROIs', None))
 
 class TestImmunogenicityPrediction(TestMHCIPrediction):
-	def __runImmunogenicityPrediction(self, protROIs):
+	def _runImmunogenicityPrediction(self, protROIs):
 		protImmuno = self.newProtocol(ProtImmunogenicityPrediction)
 
 		protImmuno.inputROIs.set(protROIs)
@@ -116,15 +116,15 @@ class TestImmunogenicityPrediction(TestMHCIPrediction):
 		return protImmuno
 
 	def test(self):
-		protMHC = self.__runMHCIPrediction()
+		protMHC = self._runMHCIPrediction()
 		self._waitOutput(protMHC, 'outputROIs', sleepTime=10)
 
-		protImmuno = self.__runImmunogenicityPrediction(protMHC)
+		protImmuno = self._runImmunogenicityPrediction(protMHC)
 		self._waitOutput(protImmuno, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protImmuno, 'outputROIs', None))
 
 class TestMHCPopulationCoverage(TestMHCIIPrediction):
-	def __runMHCCoverage(self, protMHC):
+	def _runMHCCoverage(self, protMHC):
 		protPop = self.newProtocol(
 			ProtMHCIIPopulationCoverage,
 			mhc=1,
@@ -138,9 +138,9 @@ class TestMHCPopulationCoverage(TestMHCIIPrediction):
 		return protPop
 
 	def test(self):
-		protMHCII = self.__runMHCIIPrediction()
+		protMHCII = self._runMHCIIPrediction()
 		self._waitOutput(protMHCII, 'outputROIs', sleepTime=10)
-		protPop = self.__runMHCCoverage(protMHCII)
+		protPop = self._runMHCCoverage(protMHCII)
 		self._waitOutput(protPop, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protPop, 'outputROIs', None))
 
@@ -151,11 +151,11 @@ class TestElliProPrediction(BaseTest):
 		cls.ds = DataSet.getDataSet('model_building_tutorial')
 		setupTestProject(cls)
 
-		cls.__runImportPDB()
+		cls._runImportPDB()
 		cls._waitOutput(cls.protImportPDB, 'outputPdb', sleepTime=5)
 
 	@classmethod
-	def __runImportPDB(cls):
+	def _runImportPDB(cls):
 		cls.protImportPDB = cls.newProtocol(
 			ProtImportPdb,
 			inputPdbData=1,
@@ -163,7 +163,7 @@ class TestElliProPrediction(BaseTest):
 		)
 		cls.proj.launchProtocol(cls.protImportPDB, wait=False)
 
-	def __runElliProPrediction(self):
+	def _runElliProPrediction(self):
 		protElliPro = self.newProtocol(
 			ProtElliProPrediction,
 			rchains=True,
@@ -177,7 +177,7 @@ class TestElliProPrediction(BaseTest):
 		return protElliPro
 
 	def test(self):
-		protElliPro = self.__runElliProPrediction()
+		protElliPro = self._runElliProPrediction()
 		self._waitOutput(protElliPro, 'outputROIs', sleepTime=10)
 		assertHandle(self.assertIsNotNone, getattr(protElliPro, 'outputStructROIs', None))
 		assertHandle(self.assertIsNotNone, getattr(protElliPro, 'outSequenceROIs_A', None))
