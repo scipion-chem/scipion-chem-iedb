@@ -126,7 +126,7 @@ class Plugin(pwchemPlugin):
 												 f'mv {bepiHome}/BepiPred3_src/* {bepiHome} && rm -r {bepiHome}/BepiPred3_src && '
 
 		installationCmd += f"cd {bepiHome} && sed -i 's/^torch==/#torch==/g' requirements.txt && "
-		installationCmd += f"conda create -y -n {cls.getEnvName(BEPIPRED_DIC)} python=3.6 && "
+		installationCmd += f"conda create -y -n {cls.getEnvName(BEPIPRED_DIC)} python=3.5 && "
 		installationCmd += f"{cls.getCondaActivationCmd()}conda activate {cls.getEnvName(BEPIPRED_DIC)} && pip install -r requirements.txt && "
 		installationCmd += f"touch {BEPIPRED_INSTALLED}"
 

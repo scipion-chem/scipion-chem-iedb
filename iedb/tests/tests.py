@@ -126,7 +126,7 @@ class TestImmunogenicityPrediction(TestMHCIPrediction):
 class TestMHCPopulationCoverage(TestMHCIIPrediction):
 	def _runMHCCoverage(self, protMHC):
 		protPop = self.newProtocol(
-			ProtMHCIIPopulationCoverage,
+			ProtMHCPopulationCoverage,
 			mhc=1,
 			inAreas='Area'
 		)
