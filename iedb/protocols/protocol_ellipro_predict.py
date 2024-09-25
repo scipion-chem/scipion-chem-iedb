@@ -87,15 +87,19 @@ class ProtElliProPrediction(EMProtocol):
   def createOutputStep(self):
     epiDic = self.parseResults()
     handler = AtomicStructHandler(self.getReceptorPDB())
+    structModel = PDBParser().get_structure('inputAS', self.getReceptorPDB())[0]
 
     outSeqROIOuts = {}
     for chainId, chainDic in epiDic['Linear'].items():
+      mapDic = self.getResidueIdMap(structModel, chainId)
+
       outSeqROIOuts[chainId] = SetOfSequenceROIs(filename=self._getPath(f'sequenceROIs_{chainId}.sqlite'))
       chainSeq = str(handler.getSequenceFromChain(modelID=0, chainID=chainId))
       outSeq = Sequence(name=f'Chain {chainId}', sequence=chainSeq, description=f'Chain {chainId}')
 
       for roiId, roiDic in chainDic.items():
         idxs = roiDic['Index']
+        idxs = [mapDic[i] for i in idxs]
         roiSeq = Sequence(sequence=roiDic['Peptide'], name='ROI_{}-{}'.format(*idxs), id='ROI_{}-{}'.format(*idxs),
                           description='Linear ElliPro epitope')
         seqROI = SequenceROI(sequence=outSeq, seqROI=roiSeq, roiIdx=idxs[0], roiIdx2=idxs[1])
@@ -106,11 +110,9 @@ class ProtElliProPrediction(EMProtocol):
         outSeqROIOuts[chainId].append(seqROI)
 
     for chainId, outROIs in outSeqROIOuts.items():
-      print(chainId, outROIs)
       self._defineOutputs(**{f'outSequenceROIs_{chainId}': outROIs})
 
 
-    structModel = PDBParser().get_structure('inputAS', self.getReceptorPDB())[0]
     outROIs = SetOfStructROIs(filename=self._getPath('StructROIs.sqlite'))
     for roiId, roiDic in epiDic['Discontinous'].items():
       roiCoords = []
@@ -130,6 +132,11 @@ class ProtElliProPrediction(EMProtocol):
       self._defineOutputs(outputStructROIs=outROIs)
 
   ##################### UTILS #####################
+  def getResidueIdMap(self, structModel, chainId):
+    resIdxs = {}
+    for i, res in enumerate(structModel[chainId]):
+      resIdxs[res.get_id()[1]] = i+1
+    return resIdxs
 
   def getReceptorPDB(self):
     return os.path.abspath(self._getExtraPath('inputAS.pdb'))
