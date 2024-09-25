@@ -23,7 +23,7 @@ Now, specific instructions for each of the packages will be provided.
 
 Antibody Epitope Prediction tool contains collection of python scripts, specific binary for BepiPred and a pickled
 file containing residue scales for different methods. The zip file can be downloaded from
-http://tools.iedb.org/bcell/download/
+https://services.healthtech.dtu.dk/cgi-bin/sw_request?software=bepipred&version=3.0&packageversion=3.0b&platform=src
 
 Once you obtain the software file (a zip) you have several options to help Scipion finding it:
 
