@@ -112,6 +112,8 @@ class ProtBepiPredPrediction(EMProtocol):
     epiDic = self.parseResults(minLen=self.minSize.get(), maxLen=self.maxSize.get(), threshold=self.avThres.get(),
                                softThres=self.softThres.get(), softN=self.nSoft.get())
 
+    print('epidic: ', epiDic)
+
     inpSeq = self.inputSequence.get()
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
     for idxI, (epitope, score) in epiDic[list(epiDic.keys())[0]].items():
@@ -181,7 +183,7 @@ class ProtBepiPredPrediction(EMProtocol):
 
         i += 1
 
-    if not self.setSize.get() or (len(curEp) >= minLen and len(curEp) <= maxLen):
+    if (not self.setSize.get() or (len(curEp) >= minLen and len(curEp) <= maxLen)) and len(scores) > 0:
       # Save current epitope if the len conditions are met
       epiDic[protId][iniEp] = [curEp, sum(scores) / len(scores)]
     return epiDic

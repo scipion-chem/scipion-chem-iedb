@@ -58,3 +58,6 @@ class ViewerBepiPred(SequenceGeneralViewer):
   def getProtocol(self):
     if hasattr(self, 'protocol') and isinstance(self.protocol, Protocol):
       return self.protocol
+
+  def getOutputSet(self):
+    return self.protocol.outputROIs
