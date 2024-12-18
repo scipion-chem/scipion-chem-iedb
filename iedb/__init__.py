@@ -186,7 +186,7 @@ class Plugin(pwchemPlugin):
 		if not coveHome and tarPath:
 			coveHome = emHome
 			installationCmd += f'tar -xf {tarPath} -C {coveHome} && ' \
-												 f'mv {coveHome}/population_coverage/* {coveHome} && rm -r {coveHome}/population_coverage && '
+							   f'mv {coveHome}/population_coverage/* {coveHome} && rm -r {coveHome}/population_coverage && '
 
 		if coveHome != emHome:
 			installationCmd += f"mv {coveHome}/* {emHome} && rm -r {coveHome} && "
@@ -194,8 +194,8 @@ class Plugin(pwchemPlugin):
 		installationCmd += f"touch {COVE_INSTALLED}"
 
 		env.addPackage(COVE_DIC['name'], version=COVE_DIC['version'],
-									 commands=[(installationCmd, os.path.join(emHome, COVE_INSTALLED))], tar='void.tgz',
-									 default=default, buildDir=os.path.split(coveHome)[-1])
+					   commands=[(installationCmd, os.path.join(emHome, COVE_INSTALLED))], tar='void.tgz',
+					   default=default, buildDir=os.path.split(coveHome)[-1])
 
 	@classmethod
 	def _addElliProPackage(cls, env, elliJar, default=True):
