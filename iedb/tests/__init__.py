@@ -24,4 +24,11 @@
 # *
 # **************************************************************************
 
-from iedb.tests.tests import *
+from iedb.tests.tests import (
+    TestBepiPredPrediction,
+    TestMHCIPrediction,
+    TestMHCIIPrediction,
+    TestImmunogenicityPrediction,
+    TestMHCPopulationCoverage,
+    TestElliProPrediction
+)

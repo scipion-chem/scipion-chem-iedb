@@ -49,10 +49,11 @@ class BaseImportSeq(BaseTest):
 
 	@classmethod
 	def _runImportSeq(cls):
-		kwargs = {'inputSequenceName': cls.NAME,
-							'inputSequenceDescription': cls.DESCRIPTION,
-							'inputRawSequence': cls.AMINOACIDSSEQ1
-							}
+		kwargs = {
+			'inputSequenceName': cls.NAME,
+			'inputSequenceDescription': cls.DESCRIPTION,
+			'inputRawSequence': cls.AMINOACIDSSEQ1
+		}
 
 		cls.protImportSeq = cls.newProtocol(
 			ProtImportSequence, **kwargs)
@@ -124,8 +125,11 @@ class TestImmunogenicityPrediction(TestMHCIPrediction):
 
 class TestMHCPopulationCoverage(TestMHCIIPrediction):
 	def _runMHCCoverage(self, protMHC):
-		protPop = self.newProtocol(ProtMHCPopulationCoverage,
-															 mhc=1, inAreas='Area')
+		protPop = self.newProtocol(
+			ProtMHCPopulationCoverage,
+			mhc=1,
+			inAreas='Area'
+		)
 
 		protPop.inputSequenceROIs.set(protMHC)
 		protPop.inputSequenceROIs.setExtended('outputROIs')
@@ -152,13 +156,19 @@ class TestElliProPrediction(BaseTest):
 
 	@classmethod
 	def _runImportPDB(cls):
-		cls.protImportPDB = cls.newProtocol(ProtImportPdb,
-			inputPdbData=1, pdbFile=cls.ds.getFile('PDBx_mmCIF/5ni1.pdb'))
+		cls.protImportPDB = cls.newProtocol(
+			ProtImportPdb,
+			inputPdbData=1,
+			pdbFile=cls.ds.getFile('PDBx_mmCIF/5ni1.pdb')
+		)
 		cls.proj.launchProtocol(cls.protImportPDB, wait=False)
 
 	def _runElliProPrediction(self):
-		protElliPro = self.newProtocol(ProtElliProPrediction,
-																	 rchains=True, chain_name='{"model": 0, "chain": "A", "residues": 92}')
+		protElliPro = self.newProtocol(
+			ProtElliProPrediction,
+			rchains=True,
+			chain_name='{"model": 0, "chain": "A", "residues": 92}'
+		)
 
 		protElliPro.inputAtomStruct.set(self.protImportPDB)
 		protElliPro.inputAtomStruct.setExtended('outputPdb')

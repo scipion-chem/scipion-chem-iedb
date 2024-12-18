@@ -119,22 +119,22 @@ class SelectAreaWizard(VariableWizard):
       form.setVar(f'area{nLevel}', 'All')
 
 
-SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+SelectAreaWizard().addTarget(protocol=ProtMHCPopulationCoverage,
                              targets=['ethnicity'],
                              inputs=[],
                              outputs=['ethnicity'])
 
-SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+SelectAreaWizard().addTarget(protocol=ProtMHCPopulationCoverage,
                              targets=['area1'],
                              inputs=[],
                              outputs=['area1'])
 
-SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+SelectAreaWizard().addTarget(protocol=ProtMHCPopulationCoverage,
                              targets=['area2'],
                              inputs=[],
                              outputs=['area2'])
 
-SelectAreaWizard().addTarget(protocol=ProtMHCIIPopulationCoverage,
+SelectAreaWizard().addTarget(protocol=ProtMHCPopulationCoverage,
                              targets=['area3'],
                              inputs=[],
                              outputs=['area3'])
@@ -153,7 +153,7 @@ class AddPopElement(AddElementWizard):
       form.setVar(outputParam[0], prevList + '{}\n'.format(newAreas.strip()))
 
 
-AddPopElement().addTarget(protocol=ProtMHCIIPopulationCoverage,
+AddPopElement().addTarget(protocol=ProtMHCPopulationCoverage,
                           targets=['addArea'],
                           inputs=['inAreas'],
                           outputs=['inAreas'])
