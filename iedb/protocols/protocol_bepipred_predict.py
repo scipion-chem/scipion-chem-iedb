@@ -112,8 +112,6 @@ class ProtBepiPredPrediction(EMProtocol):
     epiDic = self.parseResults(minLen=self.minSize.get(), maxLen=self.maxSize.get(), threshold=self.avThres.get(),
                                softThres=self.softThres.get(), softN=self.nSoft.get())
 
-    print('epidic: ', epiDic)
-
     inpSeq = self.inputSequence.get()
     outROIs = SetOfSequenceROIs(filename=self._getPath('sequenceROIs.sqlite'))
     for idxI, (epitope, score) in epiDic[list(epiDic.keys())[0]].items():
