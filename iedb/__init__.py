@@ -33,12 +33,12 @@ This package contains protocols for creating and using ConPLex models for virtua
 import os, subprocess
 
 # Scipion em imports
-import pwem
 from pwem import Config as emConfig
-from scipion.install.funcs import InstallHelper
 
 # Plugin imports
 from pwchem import Plugin as pwchemPlugin
+from pwchem.utils import insistentRun
+
 from .bibtex import _bibtexStr
 from .constants import *
 
@@ -322,7 +322,8 @@ class Plugin(pwchemPlugin):
 		coveHome = cls.getVar(COVE_DIC["home"])
 		fullProgram = f'python {os.path.join(coveHome, "calculate_population_coverage.py")}'
 		if not popen and protocol:
-			protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
+			insistentRun(protocol, fullProgram, args, kwargs={'cwd': cwd})
+			# protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
 		else:
 			subprocess.check_call(f'{fullProgram} {args}', cwd=cwd, shell=True)
 

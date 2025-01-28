@@ -101,9 +101,11 @@ def translateArea(pops):
 def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=True):
   inEpiFiles = writeInputEpitopeFiles(inputROIs, epFile, separated, mhc)
   fullPopStr = '","'.join(populations)
+  oDir = os.path.abspath(oDir)
 
   coveArgs = []
   for epFile in inEpiFiles:
+    epFile = os.path.abspath(epFile)
     epBase = os.path.basename(epFile)
     oFile = os.path.join(oDir, epBase.replace('.tsv', '_results.tsv'))
     coveArgs += [f'-p "{fullPopStr}" -c {mhc} -f {epFile} > {oFile} ']

@@ -138,15 +138,16 @@ class ProtMHCPopulationCoverage(EMProtocol):
     return os.path.abspath(self.getResultsDir('inputEpitopes_All_results.tsv'))
 
   def performCoverageAnalysis(self, inputROIs, epFile, populations, mhc, oDir, eachROI, allROI):
+    nt = self.numberOfThreads.get()
     if eachROI:
-      nt = self.numberOfThreads.get()
       coveArgs = buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=True)
       runInParallel(iedbPlugin.runPopulationCoverage, None,
                     paramList=[coveArg for coveArg in coveArgs], jobs=nt)
 
     if allROI:
       coveArgs = buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=False)
-      iedbPlugin.runPopulationCoverage(coveArgs[0], protocol=self)
+      runInParallel(iedbPlugin.runPopulationCoverage, None,
+                    paramList=[coveArg for coveArg in coveArgs], jobs=nt)
 
   def getAreaOptions(self, level):
     areas = [self.area1.get(), self.area2.get()]
