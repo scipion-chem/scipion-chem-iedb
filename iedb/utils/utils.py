@@ -114,12 +114,15 @@ def buildMHCCoverageArgs(inputROIs, epFile, populations, mhc, oDir, separated=Tr
 def parseCoverageResults(oFile, norm=True):
   oDic = {}
   with open(oFile) as f:
-    [f.readline() for i in range(2)]
-    for line in f:
-      if line.strip():
-        sline = line.split('\t')
-        normVal = 100 if norm else 1
-        oDic[sline[0]] = {'coverage': float(sline[1][:-2])/normVal, 'average_hit': sline[2], 'pc90': sline[3].strip()}
-      else:
-        break
+    if 'No result found!' not in f.readline():
+      f.readline()
+      for line in f:
+        if line.strip():
+          sline = line.split('\t')
+          normVal = 100 if norm else 1
+          oDic[sline[0]] = {'coverage': float(sline[1][:-2])/normVal, 'average_hit': sline[2], 'pc90': sline[3].strip()}
+        else:
+          break
+    else:
+      oDic['average'] = {'coverage': 0, 'average_hit': 0, 'pc90': 0}
   return oDic
