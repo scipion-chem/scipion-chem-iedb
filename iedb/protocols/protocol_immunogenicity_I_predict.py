@@ -41,7 +41,44 @@ def writeInput(inSeqs, outFile):
 
 class ProtImmunogenicityPrediction(EMProtocol):
   """Run a prediction using immunogenicity package from IEDB to predict the immunogenicity of a peptide
-  MHC (pMHC) complex over a set of sequence ROIs"""
+  MHC (pMHC) complex over a set of sequence ROIs
+  
+  User IA Manual: ImmunogenicityIPredict Protocol
+
+The ImmunogenicityIPredict protocol estimates the immunogenic potential of
+MHC class I peptide binders. It is designed to help identify which peptide?MHC
+complexes are more likely to elicit a T-cell response, going beyond simple
+binding affinity predictions by incorporating immunogenicity-specific features.
+This makes it particularly useful in the context of neoantigen discovery,
+cancer immunotherapy, and vaccine design.
+
+To begin, the user must provide a set of peptide sequences that are known or
+predicted to bind to MHC class I molecules. These peptides should be in
+FASTA format or imported through upstream protocols within the Scipion-Chem
+platform. Each peptide is evaluated using a logistic regression model trained
+on experimentally validated immunogenic and non-immunogenic MHC I ligands.
+
+The protocol allows selection of the scoring method associated with the
+immunogenicity model. The default method assigns a probability score between
+zero and one to each peptide, reflecting the likelihood that the peptide will
+trigger a cytotoxic T-cell response once presented by an MHC I molecule. Users
+can set a classification threshold to distinguish between immunogenic and
+non-immunogenic candidates, depending on the desired balance between sensitivity
+and specificity.
+
+Output from the protocol includes a prediction table in which each peptide is
+assigned a numerical immunogenicity score, along with its classification status
+based on the chosen threshold. These results can be ranked, filtered, or
+visualized for comparison and prioritization. The protocol also supports
+downstream integration with MHC binding, epitope clustering, or antigen selection
+tools within the platform.
+
+In summary, the ImmunogenicityIPredict protocol provides a statistically grounded,
+sequence-based approach to evaluating MHC I immunogenicity. It supports the
+identification of promising epitope candidates for immunotherapeutic and
+vaccine-related applications, offering reproducible results and seamless
+integration into computational immunology workflows.
+  """
   _label = 'immunogenicity prediction'
 
   def __init__(self, **kwargs):
