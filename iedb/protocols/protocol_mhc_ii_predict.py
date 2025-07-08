@@ -40,7 +40,50 @@ SEQ, SEQROIS = 0, 1
 RANK, SCORE, TOPP, NTOP = 0, 1, 2, 3
 
 class ProtMHCIIPrediction(EMProtocol):
-  """Run a prediction using mhc-ii package from IEDB to predict MHC-II epitopes"""
+  """Run a prediction using mhc-ii package from IEDB to predict MHC-II epitopes
+  
+  User Manual: MhcIIPredict Protocol in Scipion-Chem-IEDB
+
+The MhcIIPredict protocol allows users to predict the binding affinity of peptides
+to MHC class II molecules using models available through the IEDB resource. Unlike
+MHC class I, where peptides typically bind with fixed length, MHC class II molecules
+can accommodate longer peptides with variable core binding regions. This protocol
+automates the identification and scoring of such core sequences within user-supplied
+peptides.
+
+To begin, the user must provide a set of peptides, usually in FASTA format or as
+output from a previous protocol. These peptides are typically between 13 and 25
+amino acids long. The protocol automatically scans overlapping 9-mer cores within
+each peptide and evaluates their predicted affinity to selected MHC class II alleles.
+
+The user may choose from a broad range of MHC II alleles, including human HLA-DR,
+DP, and DQ types, as well as murine variants. Multiple alleles can be selected
+simultaneously to evaluate peptide promiscuity or allele-specific binding. The
+prediction method must also be selected. Available options include recommended
+tools such as NetMHCIIpan and consensus-based methods supported by the IEDB
+infrastructure.
+
+Each peptide is assigned a quantitative binding score, which may be expressed
+as predicted affinity or percentile rank, depending on the selected method. A
+threshold can be configured to classify peptides as binders or non-binders, with
+additional labels for strong or weak binders. These labels assist in prioritizing
+epitopes for vaccine development or immunogenicity testing.
+
+The output consists of a table summarizing each peptide?allele pair with its
+best scoring core, associated binding score, and classification. The protocol
+can optionally highlight the predicted binding core within the full-length
+peptide, which is useful for experimental validation or peptide synthesis
+design. All results are compatible with downstream Scipion-Chem protocols,
+including those for immunogenicity scoring, epitope clustering, or structural
+mapping.
+
+In summary, the MhcIIPredict protocol offers a robust and flexible interface for
+predicting peptide?MHC II interactions. It supports multiple alleles and
+prediction methods, and it enables efficient screening of long peptides for
+potential T-helper cell epitopes within a reproducible and integrated
+bioinformatics environment.
+  
+  """
   _label = 'mhc-ii prediction'
 
   MINLEN, MAXLEN = 11, 30
