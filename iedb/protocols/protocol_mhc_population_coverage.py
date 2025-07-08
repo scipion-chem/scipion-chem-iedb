@@ -37,7 +37,46 @@ from ..utils import translateArea, buildMHCCoverageArgs, parseCoverageResults
 
 
 class ProtMHCPopulationCoverage(EMProtocol):
-  """Calculates the population coverage of a series of MHC epitopes"""
+  """Calculates the population coverage of a series of MHC epitopes
+  
+  User IA Manual: MhcPopulationCoverage Protocol
+
+The MhcPopulationCoverage protocol estimates how well a set of predicted T-cell
+epitopes covers the genetic diversity of human MHC alleles across global or
+regional populations. It is designed to support rational vaccine design by
+quantifying how many individuals in a given population are likely to present at
+least one of the provided epitopes.
+
+To use the protocol, the user must input a list of peptides along with their
+associated HLA alleles. This list typically results from previous MHC binding
+prediction protocols and includes the allele?peptide pairs that scored as binders.
+Each allele should be represented using standardized nomenclature, and care must
+be taken to ensure consistency with the population datasets used by IEDB.
+
+The user can select one or more populations to evaluate coverage against. These
+may include specific countries, ethnic groups, or continental aggregates. The
+population frequencies of each HLA allele are derived from curated datasets
+provided by the IEDB, ensuring that the calculations reflect real-world HLA
+distributions.
+
+The protocol then computes the percentage of the population that is predicted to
+present at least one epitope from the input set, based on the combination of
+allele frequencies and epitope?allele bindings. It can also report additional
+metrics such as the average number of recognized epitope?HLA combinations per
+individual, or the fraction of individuals covered by multiple epitopes.
+
+Results are presented in a summary table and may include a graphical breakdown
+of population coverage per region or epitope. This information is particularly
+valuable when comparing different epitope sets or designing multi-epitope
+constructs for global vaccines. Outputs can be exported or connected to
+downstream steps in the workflow, such as immunogenicity prioritization or
+antigen selection.
+
+In summary, the MhcPopulationCoverage protocol offers a quantitative way to assess
+how well a candidate epitope set represents the immunogenetic diversity of human
+populations. It helps guide the selection of epitope combinations with optimal
+coverage and supports evidence-based decisions in immunotherapy and vaccinology.
+  """
   _label = 'mhc population coverage'
 
   def __init__(self, **kwargs):
