@@ -36,7 +36,42 @@ from ..constants import BEPIPRED_DIC
 from ..protocols.protocol_mhc_ii_predict import ProtMHCIIPrediction
 
 class ProtBepiPredPrediction(ProtMHCIIPrediction):
-  """Run a prediction using BepiPred to extract B-cell epitopes"""
+  """Run a prediction using BepiPred to extract B-cell epitopes
+
+  User IA Manual: BepipredPredict Protocol
+
+The BepipredPredict protocol allows users to identify potential linear B-cell
+epitopes in protein sequences using the BepiPred algorithm. This prediction
+tool, developed as part of the IEDB framework, analyzes the amino acid sequence
+and assigns scores that reflect the likelihood of each residue being part of a
+B-cell epitope. The protocol is designed to support immunoinformatics workflows
+that involve antigen design, epitope mapping, or vaccine development.
+
+To use the protocol, the user must provide a protein sequence in FASTA format.
+This sequence should correspond to the target antigen for which epitope regions
+are to be predicted. The protocol will process the entire sequence, assigning a
+numerical score to each residue. These scores are based on a machine learning
+model trained on curated datasets of experimentally confirmed epitopes.
+
+The user may choose which version of the BepiPred model to apply, as different
+versions offer trade-offs between sensitivity and specificity. A prediction
+threshold is used to classify residues as epitope or non-epitope candidates.
+This threshold can be adjusted depending on the desired strictness of the
+prediction. Lower thresholds yield more inclusive predictions, while higher
+values reduce false positives.
+
+Output from the protocol includes a residue-level prediction table, with scores
+and classification flags for each position. Optionally, the user can generate
+visualizations that highlight predicted epitope regions along the sequence. These
+results can be exported or connected to other protocols in Scipion-Chem for
+further filtering, structural mapping, or immunogenicity assessment.
+
+In summary, the BepipredPredict protocol offers an automated, reproducible method
+for identifying linear B-cell epitope regions based solely on sequence data. It
+enables early-stage antigen design and supports workflows where structural data
+may not yet be available, making it a useful tool in the context of computational
+vaccine design and immune system modeling.
+  """
   _label = 'bepipred prediction'
 
   def __init__(self, **kwargs):
