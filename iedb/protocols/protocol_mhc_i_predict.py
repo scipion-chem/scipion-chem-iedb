@@ -40,7 +40,49 @@ RANK, IC50, TOPP, NTOP = 0, 1, 2, 3
 
 class ProtMHCIPrediction(ProtMHCIIPrediction):
   """Run a prediction using mhc-i package from IEDB to predict MHC-I epitopes over a sequence
-  or to label a set of sequence ROIs with the alleles found on them"""
+  or to label a set of sequence ROIs with the alleles found on them
+  
+  User IA Manual: MhcIPredict Protocol
+
+The MhcIPredict protocol enables the prediction of peptide binding affinities
+to MHC class I molecules using models provided by the IEDB. It supports a range
+of allele-specific and pan-specific prediction methods, and it is commonly used
+in workflows involving neoantigen discovery, immunogenicity screening, and
+vaccine target identification.
+
+To use the protocol, the user must supply a set of peptide sequences, typically
+in FASTA format or as output from an upstream peptide generation step. These
+peptides will be evaluated against a selected panel of MHC class I alleles.
+The user can choose from a wide range of available alleles, including both human
+and murine types. Alternatively, alleles can be provided as a predefined list
+or selected through filtering options within the platform.
+
+The user must also specify the prediction method to be applied. Options include
+NetMHCpan, ANN, SMM, and other algorithms integrated in the IEDB suite. Each
+method offers different performance profiles and coverage depending on the
+alleles of interest. Pan-specific methods can predict affinities even for alleles
+with limited training data, while allele-specific models may offer higher
+accuracy for well-characterized types.
+
+Key parameters include the output format and the threshold values used to
+classify peptides as binders or non-binders. The protocol produces quantitative
+affinity scores, usually reported in nanomolar units or percentile ranks. Based
+on user-defined cutoffs, peptides can be labeled as strong or weak binders. These
+labels facilitate downstream filtering and prioritization in immunoinformatics
+pipelines.
+
+Upon execution, the protocol outputs a comprehensive results table that maps
+each peptide?allele pair to its predicted affinity score and classification
+label. These results are stored with metadata and can be filtered, visualized,
+or passed to complementary protocols for immunogenicity scoring, epitope
+clustering, or structural modeling.
+
+In summary, the MhcIPredict protocol provides a reliable and flexible interface
+for MHC I binding prediction. It supports various algorithms, a broad allele
+selection, and customizable output, enabling users to evaluate peptide?MHC
+interactions efficiently within a reproducible and integrated computational
+framework.
+  """
   _label = 'mhc-i prediction'
 
   MINLEN, MAXLEN = 8, 14
