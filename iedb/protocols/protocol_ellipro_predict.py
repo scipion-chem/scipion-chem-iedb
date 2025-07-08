@@ -38,7 +38,42 @@ from .. import Plugin as iedbPlugin
 from ..constants import ELLI_DIC
 
 class ProtElliProPrediction(EMProtocol):
-  """Run a prediction using ElliPro to extract B-cell structural epitopes"""
+  """Run a prediction using ElliPro to extract B-cell structural epitopes
+  
+  User IA Manual: ElliproPredict Protocol
+
+The ElliproPredict protocol is designed to predict discontinuous B-cell epitopes
+based on the three-dimensional structure of a protein. It uses the ElliPro method,
+which combines residue protrusion indices with clustering algorithms to identify
+surface-exposed regions likely to be recognized by antibodies. The protocol is
+particularly useful for mapping conformational epitopes that cannot be inferred
+from sequence alone.
+
+To run the protocol, the user must provide a protein structure file in PDB format.
+The structure should be complete in the regions of interest, as missing residues
+can affect the accuracy of the surface and shape-based predictions. The algorithm
+requires a well-defined 3D model to compute the geometric features associated
+with potential epitopic sites.
+
+The user can adjust the minimum protrusion index threshold, which defines how far
+a residue must extend from the molecular surface to be considered as part of an
+epitope. A higher threshold will result in fewer, more conservative predictions.
+Additionally, the user may define the clustering distance to control how residues
+are grouped into predicted epitopic regions. This parameter affects the size and
+compactness of the resulting epitope candidates.
+
+The protocol outputs a list of predicted epitope clusters, each associated with a
+set of residues and a confidence score derived from the average protrusion values.
+These results are presented in a structured format and can be visualized on the
+protein structure, allowing users to inspect the spatial distribution and
+accessibility of the predicted sites.
+
+In summary, the ElliproPredict protocol enables structure-based identification of
+conformational B-cell epitopes, providing valuable insight into antigenic regions
+that may not be evident from sequence-based methods. It supports applications in
+vaccine design, antibody engineering, and immunogenicity assessment, offering a
+reproducible and interpretable tool within the Scipion-Chem platform.
+  """
   _label = 'ellipro prediction'
 
   def __init__(self, **kwargs):
