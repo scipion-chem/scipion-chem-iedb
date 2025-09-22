@@ -111,7 +111,7 @@ class Plugin(pwchemPlugin):
 		if cls.checkVarPath(IMMU_DIC, 'tar'):
 			cls._addImmunogenicityPackage(env, tarPath=cls.getVar(IMMU_DIC['tar']))
 		elif cls.checkVarPath(IMMU_DIC, 'home'):
-			cls._addImmunogenicityPackage(env, coveHome=cls.getVar(IMMU_DIC['home']))
+			cls._addImmunogenicityPackage(env, immunoHome=cls.getVar(IMMU_DIC['home']))
 
 
 	@classmethod
