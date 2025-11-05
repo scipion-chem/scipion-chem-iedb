@@ -32,7 +32,7 @@ from pwem.protocols import EMProtocol
 from pwem.convert import AtomicStructHandler
 
 from pwchem.objects import Sequence, SequenceROI, SetOfSequenceROIs, StructROI, SetOfStructROIs
-from pwchem.utils import runOpenBabel, createPocketFile
+from pwchem.utils import runOpenBabel, createPocketFile, pdbFromASFile, getBaseName, cifFromASFile
 
 from .. import Plugin as iedbPlugin
 from ..constants import ELLI_DIC
@@ -71,23 +71,20 @@ class ProtElliProPrediction(EMProtocol):
     self._insertFunctionStep(self.createOutputStep)
 
   def convertInputStep(self):
-    inASFile = self.inputAtomStruct.get().getFileName()
-    if inASFile.endswith('.pdb'):
-      os.link(inASFile, self.getReceptorPDB())
-    else:
-      self.convertReceptor2PDB(inASFile)
+    inpFile = self.getInputPath()
+    pdbFromASFile(inpFile, self._getPdbFile(), AS=self.inputAtomStruct.get())
 
   def elliProStep(self):
     chains = self.getInputChains()
-    elliArgs = f' -f {self.getReceptorPDB()} -s {self.minScore.get()} -d {self.maxDist.get()} '
+    elliArgs = f' -f {self._getPdbFile()} -s {self.minScore.get()} -d {self.maxDist.get()} '
     if chains:
       elliArgs += f'-c {",".join(chains)}'
     iedbPlugin.runElliPro(self, elliArgs, cwd=os.path.abspath(self._getExtraPath()))
 
   def createOutputStep(self):
     epiDic = self.parseResults()
-    handler = AtomicStructHandler(self.getReceptorPDB())
-    structModel = PDBParser().get_structure('inputAS', self.getReceptorPDB())[0]
+    handler = AtomicStructHandler(self._getPdbFile())
+    structModel = PDBParser().get_structure('inputAS', self._getPdbFile())[0]
 
     outSeqROIOuts = {}
     for chainId, chainDic in epiDic['Linear'].items():
@@ -113,6 +110,7 @@ class ProtElliProPrediction(EMProtocol):
       self._defineOutputs(**{f'outSequenceROIs_{chainId}': outROIs})
 
 
+    cifProtFile = cifFromASFile(self.getInputPath(), self._getCifFile(), AS=self.inputAtomStruct.get())
     outROIs = SetOfStructROIs(filename=self._getPath('StructROIs.sqlite'))
     for roiId, roiDic in epiDic['Discontinous'].items():
       roiCoords = []
@@ -123,12 +121,14 @@ class ProtElliProPrediction(EMProtocol):
         for a in atoms:
           roiCoords.append(list(a.get_coord()))
 
-      pocketFile = createPocketFile(roiCoords, roiId, outDir=self._getExtraPath())
-      pocket = StructROI(pocketFile, self.getReceptorPDB())
+      pocketFile = self._getExtraPath(f'pocketFile_{roiId}.cif')
+      createPocketFile(roiCoords, roiId, pocketFile)
+      pocket = StructROI(pocketFile, cifProtFile)
       pocket.calculateContacts()
       outROIs.append(pocket)
 
     if len(outROIs) > 0:
+      outROIs.buildPDBhetatmFile()
       self._defineOutputs(outputStructROIs=outROIs)
 
   ##################### UTILS #####################
@@ -138,16 +138,20 @@ class ProtElliProPrediction(EMProtocol):
       resIdxs[res.get_id()[1]] = i+1
     return resIdxs
 
-  def getReceptorPDB(self):
-    return os.path.abspath(self._getExtraPath('inputAS.pdb'))
+  def getInputPath(self):
+    return self.inputAtomStruct.get().getFileName()
 
-  def convertReceptor2PDB(self, proteinFile):
-    inExt = os.path.splitext(os.path.basename(proteinFile))[1]
-    oFile = self.getReceptorPDB()
-    if not os.path.exists(oFile):
-      args = ' -i{} {} -opdb -O {}'.format(inExt[1:], os.path.abspath(proteinFile), oFile)
-      runOpenBabel(protocol=self, args=args, cwd=self._getTmpPath())
-    return oFile
+  def getInputFileName(self):
+    return self.getInputPath().split('/')[-1]
+
+  def _getPdbFile(self):
+    return os.path.abspath(self._getExtraPath(self._getInputName() + '.pdb'))
+
+  def _getCifFile(self):
+    return os.path.abspath(self._getExtraPath(self._getInputName() + '.cif'))
+
+  def _getInputName(self):
+    return getBaseName(self.getInputPath())
 
   def getInputChains(self):
     chains = []
