@@ -72,7 +72,7 @@ class ProtElliProPrediction(EMProtocol):
 
   def convertInputStep(self):
     inpFile = self.getInputPath()
-    pdbFromASFile(inpFile, self._getPdbFile(), AS=self.inputAtomStruct.get())
+    pdbFromASFile(inpFile, self._getPdbFile(), atomStruct=self.inputAtomStruct.get())
 
   def elliProStep(self):
     chains = self.getInputChains()
@@ -110,7 +110,7 @@ class ProtElliProPrediction(EMProtocol):
       self._defineOutputs(**{f'outSequenceROIs_{chainId}': outROIs})
 
 
-    cifProtFile = cifFromASFile(self.getInputPath(), self._getCifFile(), AS=self.inputAtomStruct.get())
+    cifProtFile = cifFromASFile(self.getInputPath(), self._getCifFile(), atomStruct=self.inputAtomStruct.get())
     outROIs = SetOfStructROIs(filename=self._getPath('StructROIs.sqlite'))
     for roiId, roiDic in epiDic['Discontinous'].items():
       roiCoords = []
