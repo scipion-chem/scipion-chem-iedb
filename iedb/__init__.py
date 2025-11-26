@@ -252,7 +252,7 @@ class Plugin(pwchemPlugin):
 	def getDefaultDir(cls, softDic, fn=""):
 		emDir = emConfig.EM_ROOT
 		for file in os.listdir(emDir):
-			if softDic['pattern'] in file:
+			if softDic['pattern'] in file.lower():
 				foundDir = os.path.join(emDir, file, fn)
 				return foundDir.rstrip('/')
 		# print(f'BepiPred software could not be found in SOFTWARE directory ({emDir})')
