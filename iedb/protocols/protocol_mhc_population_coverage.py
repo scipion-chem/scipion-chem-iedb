@@ -105,10 +105,16 @@ class ProtMHCPopulationCoverage(EMProtocol):
 
     for roi in self.inputSequenceROIs.get():
       if self.eachROI:
-        roiDic = coveDic[str(roi.getObjId())]
-        roi._coverage = params.Float(roiDic['coverage'])
-        roi._averageHit = params.Float(roiDic['average_hit'])
-        roi._pc90 = params.Float(roiDic['pc90'])
+        roiId = str(roi.getObjId())
+        if roiId in coveDic:
+            roiDic = coveDic[roiId]
+            roi._coverage = params.Float(roiDic['coverage'])
+            roi._averageHit = params.Float(roiDic['average_hit'])
+            roi._pc90 = params.Float(roiDic['pc90'])
+        else:
+            roi._coverage = params.Float(0)
+            roi._averageHit = params.Float(None)
+            roi._pc90 = params.Float(None)
       outROIs.append(roi)
 
     if self.allROI:

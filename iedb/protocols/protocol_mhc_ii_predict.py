@@ -46,8 +46,8 @@ class ProtMHCIIPrediction(EMProtocol):
   MINLEN, MAXLEN = 11, 30
   selMap = {RANK: 'rank', SCORE: 'score', TOPP: 'topPerc', NTOP: 'topN'}
 
-  _mhciiMethodsDic = {'IEDB recommended': 'netmhciipan_el', 'Consensus-2.2': 'consensus',
-                     'NetMHCIIpan-4.1': 'NetMHCIIpan', 'NN_align-1.0': 'nn_align', 'SMM_align-1.1': 'smm_align',
+  _mhciiMethodsDic = {'IEDB recommended': 'netmhciipan', 'Consensus-2.2': 'consensus',
+                     'NN_align-1.0': 'nn_align', 'SMM_align-1.1': 'smm_align',
                      'Combinatorial Library-1.1': 'comblib', 'Sturniolo': 'sturniolo'}
   _species = ['Human', 'Mouse']
   _alleleGroups = ['7-allele method', 'Most frequent 26', 'Custom']
@@ -82,6 +82,10 @@ class ProtMHCIIPrediction(EMProtocol):
     pGroup.addParam('method', params.EnumParam, label='Prediction method: ',
                     default=0, choices=list(self._mhciiMethodsDic.keys()),
                     help="Prediction method to use for the MHC-II binding prediction over the protein sequence.")
+    pGroup.addParam('predMode', params.EnumParam, label='Prediction mode: ', condition='method==0',
+                    default=0, choices=['Binding Affinity', 'Elution'],
+                    help="Whether to predict the binding affinity or an elution score.")
+
     pGroup.addParam('specie', params.EnumParam, label='Host species: ', expertLevel=params.LEVEL_ADVANCED,
                     default=0, choices=self._species,
                     help="Host specie  to predict the MHC-II epitopes on.")
@@ -133,6 +137,9 @@ class ProtMHCIIPrediction(EMProtocol):
     oFile = self.getMHCOutputFile()
 
     method = self._mhciiMethodsDic[self.getEnumText('method')]
+    if self.method.get() == 0:
+        pMode = 'ba' if self.predMode.get() == 0 else 'el'
+        method += f'_{pMode}'
     selAlleles = self.getSelectedAlleles()
     lenList = self.getLenghts()
 
@@ -140,7 +147,7 @@ class ProtMHCIIPrediction(EMProtocol):
     alList = [allele for allele in selAlleles if allele in allowedAlleles]
     fullAlStr, fullLenStr = ','.join(alList), ','.join([str(l) for l in lenList])
 
-    mhcArgs = f'{method} {fullAlStr} {inFile} {fullLenStr} > {oFile} '
+    mhcArgs = f'{method.lower()} {fullAlStr} {inFile} {fullLenStr} > {oFile} '
 
     iedbPlugin.runMHC_II(self, mhcArgs)
 

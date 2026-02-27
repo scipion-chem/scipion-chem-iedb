@@ -46,8 +46,8 @@ class ProtMHCIPrediction(ProtMHCIIPrediction):
   MINLEN, MAXLEN = 8, 14
   selMap = {RANK: 'rank', IC50: 'ic50', TOPP: 'topPerc', NTOP: 'topN'}
 
-  _mhciMethodsDic = {'IEDB recommended': 'netmhcpan_ba', 'Consensus-2.18': 'consensus',
-                     'NetMHCpan-4.1': 'netmhccons', 'ANN-4.0': 'ann', 'SMMPMBEC-1.0': 'smmpmbec', 'SMM-1.0': 'smm',
+  _mhciMethodsDic = {'IEDB recommended': 'netmhcpan', 'Consensus-2.18': 'consensus',
+                     'NetMHC_Cons': 'netmhccons', 'ANN-4.0': 'ann', 'SMMPMBEC-1.0': 'smmpmbec', 'SMM-1.0': 'smm',
                      'Combinatorial Library-1.0': 'comblib_sidney2008', 'PickPocket-1.1': 'pìckpocket'}
   _species = ['Chimpanzee', 'Cow', 'Gorilla', 'Human', 'Macaque', 'Mouse', 'Pig']
   _alleleGroups = ['Frequent (>1%)', 'Representative HLA supertypes', 'Most frequent A, B', 'Custom']
@@ -61,6 +61,10 @@ class ProtMHCIPrediction(ProtMHCIIPrediction):
     pGroup.addParam('method', params.EnumParam, label='Prediction method: ',
                     default=0, choices=list(self._mhciMethodsDic.keys()),
                     help="Prediction method to use for the MHC-I binding prediction over the protein sequence.")
+    pGroup.addParam('predMode', params.EnumParam, label='Prediction mode: ', condition='method==0',
+                    default=0, choices=['Binding Affinity', 'Elution'],
+                    help="Whether to predict the binding affinity or an elution score.")
+
     pGroup.addParam('specie', params.EnumParam, label='Host species: ', expertLevel=params.LEVEL_ADVANCED,
                     default=3, choices=self._species,
                     help="Host specie  to predict the MHC-I epitopes on.")
@@ -104,6 +108,9 @@ class ProtMHCIPrediction(ProtMHCIIPrediction):
     oFile = self.getMHCOutputFile()
 
     method = self._mhciMethodsDic[self.getEnumText('method')]
+    if self.method.get() == 0:
+        pMode = 'ba' if self.predMode.get() == 0 else 'el'
+        method += f'_{pMode}'
     selAlleles = self.getSelectedAlleles()
     lenList = self.getLenghts()
 

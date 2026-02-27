@@ -30,7 +30,7 @@ from iedb import Plugin
 from iedb.constants import POP_DIC
 
 def getAllelesFile(mhc, method):
-  return Plugin.getPluginHome(f'constants/alleles-{mhc}/{method}_alleles.txt')
+  return Plugin.getPluginHome(f'constants/alleles-{mhc}/{method.lower()}_alleles.txt')
 
 def getAllMHCIAlleles(method, specie='human'):
   '''Parse the possible alleles given a method from the files stored in constants.
@@ -76,16 +76,18 @@ def writeInputEpitopeFiles(inputROIs, epFile, separated, mhc):
   if separated:
     for roi in inputROIs:
       groupFile = epFile.replace('.tsv', f'_{roi.clone().getObjId()}.tsv')
-      with open(groupFile, 'w') as f:
-        alleles = getMHCAlleles(roi, mhc)
-        f.write(f'{roi.getROISequence()}\t{alleles}\n')
-      outFiles.append(groupFile)
+      alleles = getMHCAlleles(roi, mhc)
+      if alleles:
+        with open(groupFile, 'w') as f:
+          f.write(f'{roi.getROISequence()}\t{alleles}\n')
+        outFiles.append(groupFile)
   else:
     epFile = epFile.replace('.tsv', f'_All.tsv')
     with open(epFile, 'w') as f:
       for roi in inputROIs:
         alleles = getMHCAlleles(roi, mhc)
-        f.write(f'{roi.getROISequence()}\t{alleles}\n')
+        if alleles:
+          f.write(f'{roi.getROISequence()}\t{alleles}\n')
     outFiles.append(epFile)
 
   return outFiles

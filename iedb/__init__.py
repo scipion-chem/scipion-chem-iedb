@@ -320,7 +320,8 @@ class Plugin(pwchemPlugin):
 	def runPopulationCoverage(cls, args, protocol=None, cwd=None, popen=False):
 		""" Run population coverage command from a given protocol. """
 		coveHome = cls.getVar(COVE_DIC["home"])
-		fullProgram = f'python {os.path.join(coveHome, "calculate_population_coverage.py")}'
+		fullProgram = f'python {os.path.join(coveHome, "calculate_population_coverage.py")} '
+		print('Running coverage: ', fullProgram + args)
 		if not popen and protocol:
 			insistentRun(protocol, fullProgram, args, kwargs={'cwd': cwd})
 			# protocol.runJob(fullProgram, args, env=cls.getEnviron(), cwd=cwd)
