@@ -42,46 +42,119 @@ class ProtMHCIPrediction(ProtMHCIIPrediction):
   """Run a prediction using mhc-i package from IEDB to predict MHC-I epitopes over a sequence
   or to label a set of sequence ROIs with the alleles found on them
   
-  User IA Manual: MhcIPredict Protocol
+  AI Generated:
 
-The MhcIPredict protocol enables the prediction of peptide binding affinities
-to MHC class I molecules using models provided by the IEDB. It supports a range
-of allele-specific and pan-specific prediction methods, and it is commonly used
-in workflows involving neoantigen discovery, immunogenicity screening, and
-vaccine target identification.
+      ProtMHCIPrediction - User Manual
 
-To use the protocol, the user must supply a set of peptide sequences, typically
-in FASTA format or as output from an upstream peptide generation step. These
-peptides will be evaluated against a selected panel of MHC class I alleles.
-The user can choose from a wide range of available alleles, including both human
-and murine types. Alternatively, alleles can be provided as a predefined list
-or selected through filtering options within the platform.
+      Overview
+      --------
+      The ProtMHCIPrediction protocol performs prediction of peptide binding
+      affinities to Major Histocompatibility Complex class I (MHC-I) molecules
+      using tools provided by the Immune Epitope Database (IEDB). It enables
+      identification of candidate T-cell epitopes that may be presented on the
+      cell surface and recognized by cytotoxic T lymphocytes.
 
-The user must also specify the prediction method to be applied. Options include
-NetMHCpan, ANN, SMM, and other algorithms integrated in the IEDB suite. Each
-method offers different performance profiles and coverage depending on the
-alleles of interest. Pan-specific methods can predict affinities even for alleles
-with limited training data, while allele-specific models may offer higher
-accuracy for well-characterized types.
+      This protocol supports both full-sequence analysis and annotation of
+      pre-defined sequence regions (ROIs), making it suitable for workflows
+      involving antigen discovery, immunogenicity screening, and vaccine design.
 
-Key parameters include the output format and the threshold values used to
-classify peptides as binders or non-binders. The protocol produces quantitative
-affinity scores, usually reported in nanomolar units or percentile ranks. Based
-on user-defined cutoffs, peptides can be labeled as strong or weak binders. These
-labels facilitate downstream filtering and prioritization in immunoinformatics
-pipelines.
+      Input Requirements
+      ------------------
+      1. **Protein Sequence or Sequence ROIs**:
+         - A full protein sequence (FASTA format), or
+         - A set of sequence Regions Of Interest (ROIs).
+         - Sequences should be valid amino acid chains using one-letter codes.
 
-Upon execution, the protocol outputs a comprehensive results table that maps
-each peptide?allele pair to its predicted affinity score and classification
-label. These results are stored with metadata and can be filtered, visualized,
-or passed to complementary protocols for immunogenicity scoring, epitope
-clustering, or structural modeling.
+      2. **Peptide Lengths**:
+         - User-defined peptide lengths within the supported range (typically 8–14 amino acids).
+         - Multiple lengths can be specified as a comma-separated list.
 
-In summary, the MhcIPredict protocol provides a reliable and flexible interface
-for MHC I binding prediction. It supports various algorithms, a broad allele
-selection, and customizable output, enabling users to evaluate peptide?MHC
-interactions efficiently within a reproducible and integrated computational
-framework.
+      Workflow
+      --------
+      1. **Input Processing**:
+         - The input sequence or ROIs are exported to a FASTA file.
+         - Peptides of specified lengths are generated from the input.
+
+      2. **Allele Selection**:
+         - The user selects MHC-I alleles based on:
+           - Species (e.g., human, mouse),
+           - Predefined allele groups, or
+           - Custom allele lists.
+         - Supported alleles depend on the selected prediction method.
+
+      3. **Prediction Method Selection**:
+         - The user selects an algorithm such as:
+           - NetMHCpan,
+           - ANN,
+           - SMM,
+           - Consensus methods.
+         - Each method offers different trade-offs in coverage and accuracy.
+
+      4. **Binding Affinity Prediction**:
+         - The IEDB backend tool is executed.
+         - For each peptide–allele pair, a binding score is computed:
+           - IC50 (nM), or
+           - Percentile rank.
+
+      5. **Peptide Selection**:
+         - Predicted peptides are filtered based on user-defined criteria:
+           - Percentile rank threshold,
+           - IC50 threshold,
+           - Top percentage,
+           - Top N peptides.
+         - Optionally, peptides predicted for multiple alleles can be merged.
+
+      6. **Result Annotation**:
+         - Each selected peptide is converted into a SequenceROI object.
+         - Metadata includes:
+           - Associated allele(s),
+           - Prediction score,
+           - Source method.
+
+      Outputs
+      -------
+      - **Predicted Epitope ROIs**:
+        - SetOfSequenceROIs containing predicted MHC-I epitopes.
+        - Each ROI includes:
+          - Peptide sequence,
+          - Position in the original sequence,
+          - Associated allele(s),
+          - Binding score.
+
+      - **Annotated Input ROIs (optional)**:
+        - If input ROIs are provided, each ROI is labeled with:
+          - Detected alleles,
+          - Best binding score.
+
+      Advanced Options
+      ----------------
+      - Selection of prediction method (NetMHCpan, ANN, etc.).
+      - Custom allele specification.
+      - Multiple peptide lengths.
+      - Merging predictions across alleles.
+      - Flexible selection criteria (rank, IC50, top%).
+
+      Validation & Warnings
+      ---------------------
+      - Input sequences must be valid and properly formatted.
+      - Selected alleles must be compatible with the chosen method.
+      - Peptide lengths must fall within supported limits.
+      - Some allele–length combinations may not be available.
+
+      Practical Recommendations
+      -------------------------
+      - Use pan-specific methods (e.g., NetMHCpan) for broader allele coverage.
+      - Apply stringent thresholds (e.g., rank ≤ 1%) for high-confidence epitopes.
+      - Combine results with immunogenicity prediction for better prioritization.
+      - Validate predicted epitopes experimentally when possible.
+
+      Final Perspective
+      -----------------
+      ProtMHCIPrediction provides a comprehensive and flexible framework for
+      predicting MHC class I binding peptides. By integrating multiple prediction
+      methods, allele selection strategies, and filtering options, it enables
+      efficient identification of candidate T-cell epitopes for immunological
+      research, vaccine design, and therapeutic development.
   """
   _label = 'mhc-i prediction'
 

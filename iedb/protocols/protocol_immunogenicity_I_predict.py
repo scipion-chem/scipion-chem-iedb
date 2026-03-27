@@ -43,41 +43,91 @@ class ProtImmunogenicityPrediction(EMProtocol):
   """Run a prediction using immunogenicity package from IEDB to predict the immunogenicity of a peptide
   MHC (pMHC) complex over a set of sequence ROIs
   
-  User IA Manual: ImmunogenicityIPredict Protocol
+   AI Generated:
 
-The ImmunogenicityIPredict protocol estimates the immunogenic potential of
-MHC class I peptide binders. It is designed to help identify which peptide?MHC
-complexes are more likely to elicit a T-cell response, going beyond simple
-binding affinity predictions by incorporating immunogenicity-specific features.
-This makes it particularly useful in the context of neoantigen discovery,
-cancer immunotherapy, and vaccine design.
+      ProtImmunogenicityPrediction - User Manual
 
-To begin, the user must provide a set of peptide sequences that are known or
-predicted to bind to MHC class I molecules. These peptides should be in
-FASTA format or imported through upstream protocols within the Scipion-Chem
-platform. Each peptide is evaluated using a logistic regression model trained
-on experimentally validated immunogenic and non-immunogenic MHC I ligands.
+      Overview
+      --------
+      The ProtImmunogenicityPrediction protocol evaluates the immunogenic
+      potential of peptide sequences presented by MHC class I molecules. It
+      predicts the likelihood that a peptide–MHC complex will elicit a
+      cytotoxic T-cell response.
 
-The protocol allows selection of the scoring method associated with the
-immunogenicity model. The default method assigns a probability score between
-zero and one to each peptide, reflecting the likelihood that the peptide will
-trigger a cytotoxic T-cell response once presented by an MHC I molecule. Users
-can set a classification threshold to distinguish between immunogenic and
-non-immunogenic candidates, depending on the desired balance between sensitivity
-and specificity.
+      This protocol goes beyond binding affinity prediction by incorporating
+      sequence-derived features associated with T-cell recognition, making it
+      particularly useful for neoantigen discovery, cancer immunotherapy, and
+      vaccine design.
 
-Output from the protocol includes a prediction table in which each peptide is
-assigned a numerical immunogenicity score, along with its classification status
-based on the chosen threshold. These results can be ranked, filtered, or
-visualized for comparison and prioritization. The protocol also supports
-downstream integration with MHC binding, epitope clustering, or antigen selection
-tools within the platform.
+      Input Requirements
+      ------------------
+      1. **Peptide Sequences**:
+         - A SetOfSequenceROIs containing peptide regions of interest.
+         - Each ROI represents a candidate epitope sequence.
 
-In summary, the ImmunogenicityIPredict protocol provides a statistically grounded,
-sequence-based approach to evaluating MHC I immunogenicity. It supports the
-identification of promising epitope candidates for immunotherapeutic and
-vaccine-related applications, offering reproducible results and seamless
-integration into computational immunology workflows.
+      2. **Sequence Characteristics**:
+         - Typically peptides of length 8–14 amino acids.
+         - Should correspond to predicted or known MHC class I binders.
+
+      Workflow
+      --------
+      1. **Input Extraction**:
+         - Peptide sequences are extracted from the input ROIs.
+         - Sequences are written into a plain text input file.
+
+      2. **Immunogenicity Prediction**:
+         - Runs the IEDB immunogenicity prediction tool.
+         - Applies a statistical model (logistic regression-based).
+         - Computes a score representing immunogenic potential.
+
+      3. **Scoring**:
+         - Each peptide is assigned a numerical score.
+         - Higher scores indicate higher likelihood of T-cell activation.
+
+      4. **Annotation**:
+         - Scores are mapped back to the original ROIs.
+         - Each ROI is labeled with its immunogenicity value.
+
+      Outputs
+      -------
+      - **Annotated Sequence ROIs (SetOfSequenceROIs)**:
+        - Input ROIs enriched with immunogenicity scores.
+        - Each ROI includes:
+          - Original peptide sequence
+          - Immunogenicity score
+          - Metadata preserved from input
+
+      - **Prediction Output File**:
+        - Tabular file containing peptide sequences and scores.
+        - Stored for traceability and further analysis.
+
+      Advanced Options
+      ----------------
+      - Custom masking of anchor residues:
+        - Allows specification of positions to ignore in scoring.
+        - Useful for fine-tuning predictions based on MHC binding motifs.
+
+      Validation & Warnings
+      ---------------------
+      - Input peptides should be valid MHC class I binders.
+      - Very short or very long peptides may not be properly evaluated.
+      - Duplicate sequences may overwrite scores if not handled carefully.
+      - Results depend on the statistical model and training dataset.
+
+      Practical Recommendations
+      -------------------------
+      - Use this protocol after MHC binding prediction steps.
+      - Focus on peptides with strong binding affinity first.
+      - Combine immunogenicity scores with other filters (e.g., expression data).
+      - Validate top candidates experimentally when possible.
+
+      Final Perspective
+      -----------------
+      ProtImmunogenicityPrediction provides a fast and effective method to
+      prioritize peptide candidates based on their potential to trigger an
+      immune response. By integrating immunogenicity prediction into the
+      workflow, it enhances the selection of biologically relevant epitopes
+      for therapeutic and vaccine applications.
   """
   _label = 'immunogenicity prediction'
 

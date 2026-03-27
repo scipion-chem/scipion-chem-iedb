@@ -40,39 +40,102 @@ from ..constants import ELLI_DIC
 class ProtElliProPrediction(EMProtocol):
   """Run a prediction using ElliPro to extract B-cell structural epitopes
   
-  User IA Manual: ElliproPredict Protocol
+  AI Generated:
 
-The ElliproPredict protocol is designed to predict discontinuous B-cell epitopes
-based on the three-dimensional structure of a protein. It uses the ElliPro method,
-which combines residue protrusion indices with clustering algorithms to identify
-surface-exposed regions likely to be recognized by antibodies. The protocol is
-particularly useful for mapping conformational epitopes that cannot be inferred
-from sequence alone.
+      ProtElliProPrediction - User Manual
 
-To run the protocol, the user must provide a protein structure file in PDB format.
-The structure should be complete in the regions of interest, as missing residues
-can affect the accuracy of the surface and shape-based predictions. The algorithm
-requires a well-defined 3D model to compute the geometric features associated
-with potential epitopic sites.
+      Overview
+      --------
+      The ProtElliProPrediction protocol identifies B-cell epitopes using
+      three-dimensional protein structures and the ElliPro method. It predicts
+      both linear (continuous) and discontinuous (conformational) epitopes based
+      on residue protrusion and spatial clustering.
 
-The user can adjust the minimum protrusion index threshold, which defines how far
-a residue must extend from the molecular surface to be considered as part of an
-epitope. A higher threshold will result in fewer, more conservative predictions.
-Additionally, the user may define the clustering distance to control how residues
-are grouped into predicted epitopic regions. This parameter affects the size and
-compactness of the resulting epitope candidates.
+      This protocol is especially useful when structural data is available,
+      enabling the detection of surface-exposed antigenic regions that are not
+      evident from sequence-based approaches.
 
-The protocol outputs a list of predicted epitope clusters, each associated with a
-set of residues and a confidence score derived from the average protrusion values.
-These results are presented in a structured format and can be visualized on the
-protein structure, allowing users to inspect the spatial distribution and
-accessibility of the predicted sites.
+      Input Requirements
+      ------------------
+      1. **Protein Structure**:
+         - AtomStruct object containing the receptor structure.
+         - Input should preferably be in PDB format.
 
-In summary, the ElliproPredict protocol enables structure-based identification of
-conformational B-cell epitopes, providing valuable insight into antigenic regions
-that may not be evident from sequence-based methods. It supports applications in
-vaccine design, antibody engineering, and immunogenicity assessment, offering a
-reproducible and interpretable tool within the Scipion-Chem platform.
+      2. **Structure Quality**:
+         - Must include relevant residues for epitope prediction.
+         - Missing regions or poor structural quality may affect results.
+
+      3. **Optional Chain Selection**:
+         - Specific chains can be selected for focused analysis.
+
+      Workflow
+      --------
+      1. **Input Preparation**:
+         - The input structure is converted to PDB format if necessary.
+         - Optional filtering of selected chains is applied.
+
+      2. **ElliPro Execution**:
+         - Runs ElliPro via the IEDB plugin.
+         - Computes residue protrusion indices.
+         - Identifies surface-exposed residues.
+
+      3. **Epitope Detection**:
+         - Linear epitopes are identified based on sequence continuity.
+         - Discontinuous epitopes are detected using spatial clustering.
+         - Residues are grouped into epitope regions.
+
+      4. **Scoring**:
+         - Each epitope is assigned a score based on protrusion and clustering.
+         - Higher scores indicate higher likelihood of antibody recognition.
+
+      5. **Mapping & Conversion**:
+         - Residue indices are mapped to sequence positions.
+         - Structural coordinates are extracted for discontinuous epitopes.
+
+      Outputs
+      -------
+      - **Sequence-Based Epitopes (SetOfSequenceROIs)**:
+        - Generated per chain.
+        - Each ROI includes:
+          - Epitope sequence
+          - Start and end positions
+          - Score
+          - Annotation as B-cell epitope (ElliPro source)
+
+      - **Structural Epitopes (SetOfStructROIs)**:
+        - Represent discontinuous epitopes.
+        - Stored as spatial clusters of residue coordinates.
+        - Can be visualized as pockets or surface regions.
+
+      Advanced Options
+      ----------------
+      - Minimum score threshold to filter predicted epitopes.
+      - Maximum distance parameter to control clustering of residues.
+      - Selection of specific chains for focused prediction.
+      - Automatic conversion of input formats using OpenBabel.
+
+      Validation & Warnings
+      ---------------------
+      - Input structure must be valid and properly formatted.
+      - Missing residues may lead to incomplete epitope detection.
+      - Chain selection must match identifiers present in the structure.
+      - Very strict thresholds may reduce the number of predicted epitopes.
+
+      Practical Recommendations
+      -------------------------
+      - Use high-quality, complete protein structures when possible.
+      - Adjust score threshold to balance sensitivity and specificity.
+      - Inspect predicted epitopes visually on the structure.
+      - Combine structural predictions with sequence-based methods (e.g., BepiPred).
+      - Validate key epitopes experimentally when required.
+
+      Final Perspective
+      -----------------
+      ProtElliProPrediction provides a robust structure-based approach for
+      identifying both linear and conformational B-cell epitopes. By leveraging
+      3D structural information, it enables more accurate detection of antigenic
+      regions, making it a valuable tool in vaccine design, antibody engineering,
+      and immunological research.
   """
   _label = 'ellipro prediction'
 
