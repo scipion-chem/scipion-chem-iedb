@@ -50,7 +50,7 @@ class ProtMHCIIPrediction(EMProtocol):
                      'NN_align-1.0': 'nn_align', 'SMM_align-1.1': 'smm_align',
                      'Combinatorial Library-1.1': 'comblib', 'Sturniolo': 'sturniolo'}
   _species = ['Human', 'Mouse']
-  _alleleGroups = ['7-allele method', 'Most frequent 26', 'Custom']
+  _alleleGroups = ['7-allele method', 'Most frequent 27', 'Custom']
   _selTypes = ['Percentile rank', 'Score', 'Top x%', 'Top x']
 
   def __init__(self, **kwargs):
@@ -122,7 +122,6 @@ class ProtMHCIIPrediction(EMProtocol):
                     condition='selType==2', help="Select top x% peptides based on percentile rank")
     sGroup.addParam('topN', params.IntParam, label='Top threshold: ', default=5, condition='selType==3',
                     help="Select top x peptides based on percentile rank")
-
 
 
   def _insertAllSteps(self):
