@@ -216,7 +216,7 @@ class ProtMHCIIPrediction(EMProtocol):
       self.inputSequence.get().exportToFile(faFile)
     else:
       lens = self.getLenghts()
-      self.inputSequenceROIs.get().exportToFile(faFile, mainSeq=False, minLen=min(lens))
+      self.inputSequenceROIs.get().exportToFile(faFile, mainSeq=False, minLen=max(lens))
     return os.path.abspath(faFile)
 
   def getSelectedAlleles(self):
