@@ -22,10 +22,15 @@ jobs:
         working-directory: ${{ github.workspace }}/../
         run: scipion/scipion3 installp -p scipion-chem/ --devel
       
+      # Resolve BOTH ref and repository from the PR head: an explicit 'ref' with no
+      # matching 'repository' defaults to the base repo, so a fork PR looks for its
+      # own branch name inside scipion-chem and the checkout fails before any test
+      # runs. The github.sha/github.repository fallbacks keep workflow_dispatch working.
       - name: Checkout repository
         uses: actions/checkout@main
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
       
       - name: Download & install BepiPred
         working-directory: ${{ github.workspace }}/../
@@ -46,7 +51,7 @@ jobs:
           ../scipion/scipion3 installp -p . --devel
       
       - name: Run tests
-        working-directory: ${{ github.workspace }}/${{ vars.FOLDER_WITH_VERSION }}
+        working-directory: ${{ github.workspace }}/${{ vars.FOLDER_WITH_VERSION || 'iedb' }}
         run: |
           pip install --user scipion-testrunner
-          scipion_testrunner ${{ github.workspace }}/../scipion/scipion3 ${{ vars.FOLDER_WITH_VERSION }} --noGpu --testData=testData.json
+          scipion_testrunner ${{ github.workspace }}/../scipion/scipion3 ${{ vars.FOLDER_WITH_VERSION || 'iedb' }} --noGpu --testData=testData.json
