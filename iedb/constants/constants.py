@@ -44,6 +44,14 @@ COVE_DIC = {'name': 'population_coverage',    'version': '3.0.2', 'pattern': 'po
 ELLI_DIC = {'name': 'ellipro',    'version': '1.0', 'pattern': 'ellipro',
             'home': 'ELLIPRO_HOME', 'jar': 'ELLIPRO_JAR'}
 
+# IEDB B-cell protective/neutralizing epitope cross-reference (see
+# ProtIEDBCrossref): wraps no binary/conda env, pure pandas logic over a
+# locally-filtered subset of the IEDB bulk export. IEDB's bulk export terms
+# of use do not clearly permit redistributing even a filtered subset, so
+# this stays a locally-downloaded reference file, never auto-fetched (same
+# treatment as the LANL/CATNAP cross-reference).
+IEDB_BCELL_REFERENCE_PATH = 'IEDB_BCELL_REFERENCE_PATH'
+
 IMMU_DIC = {'name': 'immunogenicity',    'version': '1.1', 'pattern': 'immunogenicity',
             'home': 'IMMUNO_HOME', 'tar': 'IMMUNO_TAR', 'activation': 'IMMUNO_ACTIVATION_CMD'}
 
