@@ -25,17 +25,15 @@
 
 """
 This protocol is used to cross-reference peptide candidates against known
-B-cell epitopes with a DOCUMENTED protective/neutralizing effect (any
-pathogen), using a locally-filtered subset of the IEDB bulk export.
+B-cell epitopes with a documented protective or neutralizing effect, for
+any pathogen, using a locally-filtered subset of the IEDB bulk export.
 
-Generalizes pwchem core's ProtLANLCATNAPCrossref (HIV-specific) to any
-studied pathogen: same matching mechanism (longest-common-substring
-overlap, no structural alignment/organism pre-filtering -- the sequence
-match itself acts as the implicit organism filter). Lives in
-scipion-chem-iedb (not pwchem core) since it is IEDB-specific; reuses
-'longestCommonSubstringLen' from pwchem core's protocol_lanlcatnap_crossref
-via the scipion-chem dependency this plugin already declares, instead of
-a second copy of the algorithm.
+Generalizes the HIV-specific LANL/CATNAP cross-reference to any studied
+pathogen: same matching mechanism (longest-common-substring overlap, no
+structural alignment or organism pre-filtering -- the sequence match
+itself acts as the implicit organism filter). It is self-contained: the
+matching helper is defined below rather than imported from another plugin,
+so this protocol carries no cross-plugin dependency.
 
 IEDB's bulk export terms of use do not clearly permit redistributing even
 a filtered subset, so -- same treatment as LANL/CATNAP -- this stays a
@@ -47,7 +45,6 @@ from typing import List
 
 import pandas as pd
 from pwchem.objects import SetOfSequenceROIs
-from pwchem.protocols.Sequences.protocol_lanlcatnap_crossref import longestCommonSubstringLen
 from pwem.protocols import EMProtocol
 from pyworkflow.object import Integer, String
 from pyworkflow.protocol import params
@@ -67,6 +64,22 @@ _RAW_CSV_COLUMNS = [
 ]
 
 DEFAULT_MIN_OVERLAP = 6
+
+
+def longestCommonSubstringLen(a: str, b: str) -> int:
+    """Length of the longest common substring between 'a' and 'b' (DP O(len(a)*len(b)))."""
+    if not a or not b:
+        return 0
+    prev = [0] * (len(b) + 1)
+    best = 0
+    for i in range(1, len(a) + 1):
+        curr = [0] * (len(b) + 1)
+        for j in range(1, len(b) + 1):
+            if a[i - 1] == b[j - 1]:
+                curr[j] = prev[j - 1] + 1
+                best = max(best, curr[j])
+        prev = curr
+    return best
 
 
 class IEDBParseError(Exception):

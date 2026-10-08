@@ -49,9 +49,7 @@ ELLI_DIC = {'name': 'ellipro',    'version': '1.0', 'pattern': 'ellipro',
 # locally-filtered subset of the IEDB bulk export. IEDB's bulk export terms
 # of use do not clearly permit redistributing even a filtered subset, so
 # this stays a locally-downloaded reference file, never auto-fetched (same
-# treatment as pwchem core's LANL/CATNAP crossref, whose
-# 'longestCommonSubstringLen' this protocol reuses via the scipion-chem
-# dependency instead of duplicating the algorithm).
+# treatment as the LANL/CATNAP cross-reference).
 IEDB_BCELL_REFERENCE_PATH = 'IEDB_BCELL_REFERENCE_PATH'
 
 IMMU_DIC = {'name': 'immunogenicity',    'version': '1.1', 'pattern': 'immunogenicity',
