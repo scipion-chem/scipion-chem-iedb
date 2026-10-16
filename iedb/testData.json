@@ -8,7 +8,16 @@
 			
 		],
 		"others": [
-			
+			{"test": "tests.TestBepiPredPrediction", "reason": "BepiPred-3.0 cannot be installed unattended: DTU Health Tech does not allow redistributing the package, so bepipred-3.0b.src.zip has to be downloaded manually with an academic account and wired through BEPIPRED_ZIP/BEPIPRED_HOME. The protocol's own validator reports it as missing instead of failing silently."},
+			{"test": "tests.TestBepiPredPredictionWindowVote", "reason": "Same dependency as tests.TestBepiPredPrediction: BepiPred-3.0 is a manual, non-redistributable download wired through BEPIPRED_ZIP/BEPIPRED_HOME."},
+			{"test": "tests.TestMHCIPrediction", "reason": "The IEDB MHC-I standalone tool is served behind a license acceptance form at tools.iedb.org, with no stable unattended download URL, so its tarball is obtained manually and wired through MHC_I_TAR/MHC_I_HOME. The protocol's own validator reports it as missing instead of failing silently."},
+			{"test": "tests.TestMHCIIPrediction", "reason": "Same situation as tests.TestMHCIPrediction for the IEDB MHC-II standalone tool, wired through MHC_II_TAR/MHC_II_HOME."},
+			{"test": "tests.TestMHCLabelROIs", "reason": "Exercises BepiPred-3.0 and the MHC-I/MHC-II tools together, so it needs all three manual downloads at once."},
+			{"test": "tests.TestImmunogenicityPrediction", "reason": "The IEDB class I immunogenicity tool is a manual, license-gated download wired through IMMUNO_TAR/IMMUNO_HOME, and the test also needs the MHC-I tool to produce its input epitopes."},
+			{"test": "tests.TestMHCPopulationCoverage", "reason": "The IEDB population coverage tool is a manual, license-gated download wired through COVERAGE_TAR/COVERAGE_HOME, and the test also needs the MHC-II tool to produce its input epitopes."},
+			{"test": "tests.TestElliProPrediction", "reason": "ElliPro ships as a jar that is not redistributable and is obtained manually, wired through ELLIPRO_JAR/ELLIPRO_HOME. The protocol's own validator reports it as missing instead of failing silently."},
+			{"test": "test_alt_methods.TestAlternativeMethods", "reason": "Covers every selectable MHC-I/MHC-II method plus the alternative BepiPred prediction mode, so it depends on the same manual downloads as the tests above."},
+			{"test": "test_iedb_crossref.TestIEDBCrossref", "reason": "The IEDB B-cell reference cannot be installed unattended: IEDB's bulk export terms of use do not clearly permit redistributing even a filtered subset, so the reference file is downloaded and filtered locally and wired through IEDB_BCELL_REFERENCE_PATH. The test already skips itself when that variable points nowhere."}
 		]
 	}
 }
