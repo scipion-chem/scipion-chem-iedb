@@ -77,6 +77,10 @@ class Plugin(pwchemPlugin):
 		# conda env (see _addImmunogenicityPackage) so users don't need to build one themselves.
 		cls._defineVar(IMMU_DIC['activation'], cls.getEnvActivationCommand(IMMU_DIC))
 
+		# IEDB B-cell protective/neutralizing epitope reference (manually
+		# downloaded, see ProtIEDBCrossref/constants.py)
+		cls._defineVar(IEDB_BCELL_REFERENCE_PATH, '')
+
 	@classmethod
 	def defineBinaries(cls, env):
 		"""This function defines the binaries for each package."""

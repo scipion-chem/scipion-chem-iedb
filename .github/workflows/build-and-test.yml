@@ -1,7 +1,7 @@
 name: Build & test plugin
 on:
   pull_request:
-    branches: [master]
+    branches: [devel, main]
 
 jobs:
   build:
@@ -22,23 +22,27 @@ jobs:
         working-directory: ${{ github.workspace }}/../
         run: scipion/scipion3 installp -p scipion-chem/ --devel
       
+      # Resolve BOTH ref and repository from the PR head: an explicit 'ref' with no
+      # matching 'repository' defaults to the base repo, so a fork PR looks for its
+      # own branch name inside scipion-chem and the checkout fails before any test
+      # runs. The github.sha/github.repository fallbacks keep workflow_dispatch working.
       - name: Checkout repository
         uses: actions/checkout@main
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
       
-      - name: Download & install BepiPred
-        working-directory: ${{ github.workspace }}/../
-        env:
-          BEPIPRED_ZIP_NAME: BepiPred-3.0.tar.gz
-          BEPIPRED_TARGET_FOLDER_NAME: BepiPred-3.0
-        run: |
-          wget -O $BEPIPRED_ZIP_NAME https://downloads.iedb.org/tools/bcell/3.0/IEDB_BCell-3.0.tar.gz
-          tar -xf $BEPIPRED_ZIP_NAME
-          mv bcell_standalone $BEPIPRED_TARGET_FOLDER_NAME
-          rm $BEPIPRED_ZIP_NAME
-          echo "BEPIPRED_HOME = ${{ github.workspace }}/../$BEPIPRED_TARGET_FOLDER_NAME" >> scipion/config/scipion.conf
-  
+      # No BepiPred step on purpose. The URL this step used
+      # (downloads.iedb.org/tools/bcell/3.0/IEDB_BCell-3.0.tar.gz) serves IEDB's
+      # "Antibody Epitope Prediction" standalone suite (amino acid scales plus the
+      # BepiPred 1.0/2.0 binaries), not DTU's BepiPred-3.0: it ships no
+      # bepipred3_CLI.py, which is the program Plugin.runBepiPred calls, and its
+      # requirements.txt pins matplotlib==2.0.0 and scikit-learn==0.18, which no
+      # longer build from source in a clean Python 3.8 environment. Pointing
+      # BEPIPRED_HOME at it therefore turned the install step into a hard failure
+      # for a package the plugin cannot use anyway. BepiPred-3.0 itself is not
+      # redistributable, so it cannot be fetched unattended here; the tests that
+      # need it are declared skippable in iedb/testData.json.
       - name: Install plugin from pull request
         working-directory: ${{ github.workspace }}
         run: |
@@ -46,7 +50,7 @@ jobs:
           ../scipion/scipion3 installp -p . --devel
       
       - name: Run tests
-        working-directory: ${{ github.workspace }}/${{ vars.FOLDER_WITH_VERSION }}
+        working-directory: ${{ github.workspace }}/${{ vars.FOLDER_WITH_VERSION || 'iedb' }}
         run: |
           pip install --user scipion-testrunner
-          scipion_testrunner ${{ github.workspace }}/../scipion/scipion3 ${{ vars.FOLDER_WITH_VERSION }} --noGpu --testData=testData.json
+          scipion_testrunner ${{ github.workspace }}/../scipion/scipion3 ${{ vars.FOLDER_WITH_VERSION || 'iedb' }} --noGpu --testData=testData.json

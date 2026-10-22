@@ -35,3 +35,4 @@ from iedb.tests.tests import (
     TestElliProPrediction
 )
 from iedb.tests.test_alt_methods import TestAlternativeMethods
+from iedb.tests.test_iedb_crossref import TestIEDBCrossref
